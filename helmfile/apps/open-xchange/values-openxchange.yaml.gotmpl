@@ -5,20 +5,33 @@
 global:
   hostname: "{{ .Values.global.hosts.openxchange }}.{{ .Values.global.domain }}"
   appsuite:
+    {{- if not .Values.externalSecrets.enabled }}
     cookieHashSalt: {{ .Values.secrets.oxAppSuite.cookieHashSalt }}
     shareCryptKey: {{ .Values.secrets.oxAppSuite.shareCryptKey }}
     sessiondEncryptionKey: {{ .Values.secrets.oxAppSuite.sessiondEncryptionKey }}
+    {{- end }}
   mysql:
     host: {{ .Values.databases.oxAppSuite.host | quote }}
     database: {{ .Values.databases.oxAppSuite.name | quote }}
     readHost: {{ .Values.databases.oxAppSuite.readHost | quote }}
     readDatabase: {{ .Values.databases.oxAppSuite.name | quote }}
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart-native: when existingSecret is set, the chart skips emitting its
+    # own mysql-secret (no required-check failure) and pods consume the
+    # named Secret. Cluster Secret keys: MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD,
+    # MYSQL_WRITE_PASSWORD, MYSQL_READ_PASSWORD. Provisioned out-of-band.
+    existingSecret: "opendesk-ox-existing-mysql"
+    {{- end }}
     auth:
       user: {{ .Values.databases.oxAppSuite.username | quote }}
+      {{- if not .Values.externalSecrets.enabled }}
       password: {{ .Values.databases.oxAppSuite.password | default .Values.secrets.mariadb.rootPassword | quote }}
       rootPassword: {{ .Values.databases.oxAppSuite.password | default .Values.secrets.mariadb.rootPassword | quote }}
+      {{- end }}
       readUser: {{ .Values.databases.oxAppSuite.readUser | default .Values.databases.oxAppSuite.username | quote }}
+      {{- if not .Values.externalSecrets.enabled }}
       readPassword: {{ .Values.databases.oxAppSuite.readPassword | default .Values.databases.oxAppSuite.password | quote}}
+      {{- end }}
 
 nextcloud-integration-ui:
   image:
@@ -92,6 +105,15 @@ public-sector-ui:
     create: false
 
 appsuite:
+  {{- if .Values.externalSecrets.enabled }}
+  # Suppress the umbrella appsuite-public-sector-base's own
+  # `<release>-common-env` Secret too (it has its own
+  # common-env-secret.yaml template gated on `createCommonEnv` at this
+  # level — separate from the core-mw subchart's same-named knob). Both
+  # must be false to fully skip the helper's randAlphaNum-on-render
+  # path.
+  createCommonEnv: false
+  {{- end }}
   appsuite-toolkit:
     enabled: false
   switchboard:
@@ -558,6 +580,22 @@ appsuite:
       {{ end }}
   core-mw:
     enabled: true
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart's common-env helper auto-generates random values when global.appsuite
+    # entries are missing AND no cluster Secret is found via lookup (lookup is a
+    # no-op during `helm template`). That produces non-deterministic renders
+    # and overwrites the cluster Secret on apply. Suppress emission and
+    # provision the `<release>-common-env` Secret out-of-band.
+    createCommonEnv: false
+    checksums:
+      # The `checksum/commonEnv` pod annotation is a sha of the commonEnv
+      # helper output, which randAlphaNum's the (now out-of-band) values on
+      # every render — non-deterministic. We don't need this rollout trigger
+      # (Reloader rolls pods when the cluster Secret rotates), and a churning
+      # annotation breaks the validate-only render CI. Disable it; keep the
+      # config + existingSecrets checksums (those are deterministic + useful).
+      commonEnv: false
+    {{- end }}
     asConfig:
       default:
         host: "all"
@@ -614,14 +652,18 @@ appsuite:
             com.openexchange.quota.attachment: "-1"
             # Mailfilter
             com.openexchange.mail.filter.passwordSource: "global"
+            {{- if not .Values.externalSecrets.enabled }}
             com.openexchange.mail.filter.masterPassword: {{ .Values.secrets.oxAppSuite.migrationsMasterPassword | quote }}
+            {{- end }}
             com.openexchange.mail.filter.preferredSaslMech: ""
             # Loosen API the rate limit
             com.openexchange.servlet.maxRateTimeWindow: "60000"
             com.openexchange.servlet.maxRate: "3000"
+          {{- if not .Values.externalSecrets.enabled }}
           propertiesFiles:
             /opt/open-xchange/etc/masterpassword-authentication.properties:
               com.openexchange.authentication.masterpassword.password: {{ .Values.secrets.oxAppSuite.migrationsMasterPassword | quote }}
+          {{- end }}
         services:
           - type: ClusterIP
             ports:
@@ -661,13 +703,24 @@ appsuite:
             - "admin"
         {{- end }}
     masterAdmin: "admin"
-    masterPassword: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
     hzGroupName: "hzgroup"
-    hzGroupPassword: {{ .Values.secrets.oxAppSuite.hzGroupPassword | quote }}
     basicAuthLogin: "oxlogin"
-    basicAuthPassword: {{ .Values.secrets.oxAppSuite.basicAuthPassword | quote }}
     jolokiaLogin: "jolokia"
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart-native envFrom merge: existingEnvSecret keys override secret-envvars.
+    # The cluster Secret must carry MASTER_ADMIN_PW, OX_BASIC_AUTH_PASSWORD,
+    # JOLOKIA_PASSWORD, HZ_GROUP_PASSWORD entries.
+    existingEnvSecret: {{ .Values.externalSecrets.name | quote }}
+    masterPassword: ""
+    hzGroupPassword: ""
+    basicAuthPassword: ""
+    jolokiaPassword: ""
+    {{- else }}
+    masterPassword: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
+    hzGroupPassword: {{ .Values.secrets.oxAppSuite.hzGroupPassword | quote }}
+    basicAuthPassword: {{ .Values.secrets.oxAppSuite.basicAuthPassword | quote }}
     jolokiaPassword: {{ .Values.secrets.oxAppSuite.jolokiaPassword | quote }}
+    {{- end }}
     hostname: "{{ .Values.global.hosts.openxchange }}.{{ .Values.global.domain }}"
     podAnnotations:
       intents.otterize.com/service-name: "open-xchange-core-mw"
@@ -998,8 +1051,18 @@ appsuite:
       {{- end }}
     {{- if .Values.certificate.selfSigned }}
     extraEnv:
+    {{- if .Values.externalSecrets.enabled }}
+    - name: "TRUSTSTORE_PASSWORD"
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "CERTIFICATES_PASSWORD"
+    - name: "JAVA_OPTS_APPEND"
+      value: "-Djavax.net.ssl.trustStore=/etc/ssl/certs/truststore.jks -Djavax.net.ssl.trustStoreType=jks -Djavax.net.ssl.trustStorePassword=$(TRUSTSTORE_PASSWORD)"
+    {{- else }}
     - name: "JAVA_OPTS_APPEND"
       value: {{ printf "%s %s=%s" "-Djavax.net.ssl.trustStore=/etc/ssl/certs/truststore.jks -Djavax.net.ssl.trustStoreType=jks" "-Djavax.net.ssl.trustStorePassword" .Values.secrets.certificates.password | quote }}
+    {{- end }}
     extraVolumes:
       - name: "trusted-cert-secret-volume"
         secret:
@@ -1013,6 +1076,13 @@ appsuite:
       - name: "trusted-cert-secret-volume"
         mountPath: "/etc/ssl/certs/"
     {{- end }}
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart-native: an existing Secret carries all the secretProperties /
+    # secretPropertiesFiles entries as a single `1001_existing.yaml` blob
+    # (see core-mw values.yaml `existingPropertiesSecret` documentation).
+    # The cluster Secret is provisioned out-of-band (e.g. bootstrap_secrets.py).
+    existingPropertiesSecret: "opendesk-ox-existing-properties"
+    {{- else }}
     secretProperties:
       com.openexchange.cookie.hash.salt: {{ .Values.secrets.oxAppSuite.cookieHashSalt | quote }}
       com.openexchange.sessiond.encryptionKey: {{ .Values.secrets.oxAppSuite.sessiondEncryptionKey | quote }}
@@ -1042,6 +1112,7 @@ appsuite:
       /opt/open-xchange/etc/noreply.properties:
         com.openexchange.noreply.login: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
         com.openexchange.noreply.password: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
+    {{- end }}
     propertiesFiles:
       /opt/open-xchange/etc/Group.properties:
         CHECK_GROUP_UID_FOR_NOT_ALLOWED_CHARS: "false"
@@ -1131,7 +1202,12 @@ appsuite:
       io.ox/dynamic-theme//folderHover: {{ .Values.theme.colors.secondaryGreyLight | quote }}
       # openDesk logo in top bar links to portal
       io.ox/core//logoAction: {{ printf "https://%s.%s" .Values.global.hosts.nubus .Values.global.domain | quote }}
-    {{ if .Values.functional.groupware.mail.encryption.enabled }}
+    {{- if .Values.functional.groupware.mail.encryption.enabled }}
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart-native: cluster-side Secret with `oxguardpass` key carrying the
+    # OX Guard MC+RC payload. Provisioned out-of-band.
+    existingETCFilesSecret: "opendesk-ox-existing-etc-files"
+    {{- else }}
     secretETCFiles:
       # Format of the OX Guard master key:
       # MC+base64(20 random bytes)
@@ -1139,16 +1215,24 @@ appsuite:
       oxguardpass: |
         {{ .Values.secrets.oxAppSuite.oxguardMC }}
         {{ .Values.secrets.oxAppSuite.oxguardRC }}
-    {{ end }}
+    {{- end }}
+    {{- end }}
     redis: &redisConfiguration
       enabled: true
       mode: "standalone"
       hosts:
         - {{ printf "%s:%v" .Values.cache.oxAppSuite.host .Values.cache.oxAppSuite.port | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      # Chart-native: existingSecret carries a `1001_existing.yaml`-style
+      # blob with all `com.openexchange.redis.*` properties (see core-mw
+      # values.yaml redis.existingSecret docs). Provisioned out-of-band.
+      existingSecret: "opendesk-ox-existing-redis"
+      {{- else }}
       auth:
         enabled: true
         username: {{ .Values.cache.oxAppSuite.username | quote }}
         password: {{ .Values.cache.oxAppSuite.password | default .Values.secrets.redis.password | quote }}
+      {{- end }}
     image:
       registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.openxchangeCoreMW.registry | quote }}
       repository: {{ .Values.images.openxchangeCoreMW.repository | quote }}
@@ -1274,9 +1358,11 @@ appsuite:
 
   core-documentconverter:
     adminUser: "admin"
-    adminPassword: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
     basicAuthLogin: "oxlogin"
+    {{- if not .Values.externalSecrets.enabled }}
+    adminPassword: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
     basicAuthPassword: {{ .Values.secrets.oxAppSuite.basicAuthPassword | quote }}
+    {{- end }}
     enabled: true
     documentConverter:
       cache:
@@ -1374,9 +1460,11 @@ appsuite:
   core-imageconverter:
     enabled: true
     adminUser: "admin"
-    adminPassword: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
     basicAuthLogin: "oxlogin"
+    {{- if not .Values.externalSecrets.enabled }}
+    adminPassword: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
     basicAuthPassword: {{ .Values.secrets.oxAppSuite.basicAuthPassword | quote }}
+    {{- end }}
     imagePullSecrets:
     {{- range .Values.global.imagePullSecrets }}
       - name: {{ . | quote }}

@@ -18,7 +18,13 @@ apiIngress:
     {{- end }}
 
 auth:
+  {{- if .Values.externalSecrets.enabled }}
+  existingSecret: {{ .Values.externalSecrets.name | quote }}
+  rootUserSecretKey: "MINIO_ROOT_USER"
+  rootPasswordSecretKey: "MINIO_ROOT_PASSWORD"
+  {{- else }}
   rootPassword: {{ .Values.secrets.minio.rootPassword | quote }}
+  {{- end }}
 
 commonAnnotations:
   {{ .Values.annotations.servicesExternalMinio.common | toYaml | nindent 2 }}
@@ -228,6 +234,12 @@ provisioning:
           actions:
             - "s3:*"
     {{- end }}
+  {{- if .Values.externalSecrets.enabled }}
+  # Bitnami minio's provisioning Job reads user definitions from each
+  # named Secret's keys; operator provisions the per-user creds there.
+  usersExistingSecrets:
+    - "opendesk-minio-users"
+  {{- else }}
   users:
     - username: {{ .Values.objectstores.migrations.username | quote }}
       password: {{ .Values.secrets.minio.migrationsUser | quote }}
@@ -273,6 +285,7 @@ provisioning:
         - "dovecot-bucket-policy"
       setPolicies: true
     {{- end }}
+  {{- end }}
   resources:
     {{ .Values.resources.minio | toYaml | nindent 4 }}
 

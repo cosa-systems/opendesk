@@ -18,7 +18,16 @@ global:
     domainName: {{ .Values.global.domain | quote }}
   nubusDeployment: true
   secrets:
+    {{- if .Values.externalSecrets.enabled }}
+    # When the toggle is on, every per-subchart credential below carries
+    # its own `existingSecret` reference. The umbrella's masterPassword
+    # is only a default used to *derive* missing credentials; with every
+    # one explicitly overridden it becomes unused. Set to a placeholder
+    # so the chart doesn't error on the missing value at template time.
+    masterPassword: "externalSecrets-enabled-unused"
+    {{- else }}
     masterPassword: {{ .Values.secrets.nubus.masterpassword | quote }}
+    {{- end }}
   subDomains:
     portal: {{ .Values.global.hosts.nubus | quote }}
     keycloak: {{ .Values.global.hosts.keycloak | quote }}
@@ -195,7 +204,14 @@ keycloak:
   keycloak:
     auth:
       username: "kcadmin"
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "KEYCLOAK_ADMIN_PASSWORD"
+      {{- else }}
       password: {{ .Values.secrets.keycloak.adminPassword | quote }}
+      {{- end }}
     login:
       messages:
         de:
@@ -218,11 +234,18 @@ keycloak:
     auth:
       username: {{ .Values.databases.keycloak.username | quote }}
       database: {{ .Values.databases.keycloak.name | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTGRESQL_KEYCLOAK_USER"
+      {{- else }}
       # TODO: Pending secrets refactoring to be able to provide the value directly
       existingSecret:
         name: "ums-keycloak-postgresql-opendesk-credentials"
         keyMapping:
           password: keycloakDatabasePassword
+      {{- end }}
   replicaCount: {{ .Values.replicas.keycloak }}
   resources:
     {{ .Values.resources.umsKeycloak | toYaml | nindent 4 }}
@@ -266,7 +289,14 @@ keycloak:
     - name: "KC_TRUSTSTORE_PATHS"
       value: "/etc/ssl/certs/ca-certificates.crt"
     - name: "KC_HTTPS_TRUST_STORE_PASSWORD"
+      {{- if .Values.externalSecrets.enabled }}
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "CERTIFICATES_PASSWORD"
+      {{- else }}
       value: {{ .Values.secrets.certificates.password | quote }}
+      {{- end }}
     - name: "KC_HTTPS_TRUST_STORE_TYPE"
       value: "jks"
   {{- end }}
@@ -324,12 +354,19 @@ nubusNotificationsApi:
     auth:
       username: {{ .Values.databases.umsNotificationsApi.username | quote }}
       database: {{ .Values.databases.umsNotificationsApi.name | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTGRESQL_UMS_NOTIFICATIONS_API_USER"
+      {{- else }}
       password: {{ .Values.databases.umsNotificationsApi.password | default .Values.secrets.postgresql.umsNotificationsApiUser | quote }}
       # NOTE: Nubus has still an existing secret configured for legacy reasons.
       # This disables the existing secret and ensures that the value from above
       # is used.
       existingSecret:
         name: null
+      {{- end }}
   service:
     annotations:
       {{ .Values.annotations.nubusNotificationsApi.service | toYaml | nindent 6 }}
@@ -481,11 +518,18 @@ nubusKeycloakExtensions:
     auth:
       database: {{ .Values.databases.keycloakExtension.name | quote }}
       username: {{ .Values.databases.keycloakExtension.username | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTGRESQL_KEYCLOAK_EXTENSION_USER"
+      {{- else }}
       # TODO: Pending secrets refactoring for this component chart
       existingSecret:
         name: "ums-keycloak-extensions-postgresql-opendesk-credentials"
         keyMapping:
           password: "umcKeycloakExtensionsDatabasePassword"
+      {{- end }}
   smtp:
     connection:
       host: {{ printf "%s.%s.svc.%s" "postfix" (.Values.apps.postfix.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
@@ -495,12 +539,19 @@ nubusKeycloakExtensions:
     auth:
       enabled: true
       username: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+      {{- else }}
       # TODO: Pending secrets refactoring in the component chart
       password: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
       existingSecret:
         name: "ums-keycloak-extensions-smtp-opendesk-credentials"
         keyMapping:
           password: "umcKeycloakExtensionsSmtpPassword"
+      {{- end }}
   handler:
     additionalAnnotations:
       {{ .Values.annotations.nubusKeycloakExtensions.handlerAdditional | toYaml | nindent 6 }}
@@ -545,14 +596,21 @@ nubusPortalConsumer:
   objectStorage:
     auth:
       accessKeyId: {{ .Values.objectstores.nubus.username | quote }}
-      {{- if .Values.objectstores.nubus.secretKey }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: "opendesk-s3-credentials"
+        keyMapping:
+          accessKeyId: "access-key-id"
+          secretAccessKey: "secret-access-key"
+      {{- else if .Values.objectstores.nubus.secretKey }}
       secretAccessKey: {{ .Values.objectstores.nubus.secretKey | quote }}
+      existingSecret: null
       {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
       secretAccessKey: {{ .Values.secrets.minio.umsUser | quote }}
+      existingSecret: null
       {{- else }}
       {{- fail "No objectstorage secretKey for nubus found!" }}
       {{- end }}
-      existingSecret: null
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
     endpoint: {{ printf "https://%s" .Values.objectstores.nubus.endpoint | quote }}
@@ -575,7 +633,14 @@ nubusPortalConsumer:
   provisioningApi:
     auth:
       username: "portal-consumer"
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_PORTALCONSUMER_PROVISIONING_API"
+      {{- else }}
       password: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword | quote }}
+      {{- end }}
   replicaCount: {{ .Values.replicas.umsPortalConsumer }}
   resources:
     {{ .Values.resources.umsPortalConsumer | toYaml | nindent 4 }}
@@ -670,14 +735,21 @@ nubusPortalServer:
   objectStorage:
     auth:
       accessKeyId: {{ .Values.objectstores.nubus.username | quote }}
-      {{- if .Values.objectstores.nubus.secretKey }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: "opendesk-s3-credentials"
+        keyMapping:
+          accessKeyId: "access-key-id"
+          secretAccessKey: "secret-access-key"
+      {{- else if .Values.objectstores.nubus.secretKey }}
       secretAccessKey: {{ .Values.objectstores.nubus.secretKey | quote }}
+      existingSecret: null
       {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
       secretAccessKey: {{ .Values.secrets.minio.umsUser | quote }}
+      existingSecret: null
       {{- else }}
       {{- fail "No objectstorage secretKey for nubus found!" }}
       {{- end }}
-      existingSecret: null
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
     endpoint: {{ printf "https://%s" .Values.objectstores.nubus.endpoint | quote }}
@@ -700,7 +772,14 @@ nubusPortalServer:
     centralNavigation:
       enabled: true
       auth:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            sharedSecret: "CENTRALNAVIGATION_API_KEY"
+        {{- else }}
         sharedSecret: {{ .Values.secrets.centralnavigation.apiKey | quote }}
+        {{- end }}
     featureToggles:
       notifications_api: false
       centered_layout: true
@@ -900,7 +979,14 @@ nubusLdapServer:
       repository: {{ .Values.images.nubusLdapServer.repository }}
       tag: {{ .Values.images.nubusLdapServer.tag }}
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAP_SECRET"
+      {{- else }}
       password: {{ .Values.secrets.nubus.ldapSecret | quote }}
+      {{- end }}
     leaderElector:
       image:
         registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusLdapServerLeaderElector.registry | quote }}
@@ -949,18 +1035,46 @@ nubusProvisioning:
       {{- end }}
     auth:
       admin:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_API_ADMIN"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.api.adminPassword | quote }}
+        {{- end }}
       prefill:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_API_PREFILL"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.api.prefillPassword | quote}}
+        {{- end }}
       eventsUdm:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_API_UDM_TRANSFORMER"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword | quote}}
+        {{- end }}
     image:
       registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusProvisioningApi.registry | quote }}
       repository: {{ .Values.images.nubusProvisioningApi.repository }}
       tag: {{ .Values.images.nubusProvisioningApi.tag }}
     nats:
       auth:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_API_NATS"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.api.natsPassword | quote}}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-api"
       {{- with .Values.annotations.nubusProvisioning.apiPod }}
@@ -993,7 +1107,14 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningDispatcher.tag }}
     nats:
       auth:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_DISPATCHER_NATS"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword | quote}}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-dispatcher"
       {{- with .Values.annotations.nubusProvisioning.dispatcherPod }}
@@ -1012,7 +1133,14 @@ nubusProvisioning:
       createUsers:
         adminUser:
           auth:
+            {{- if .Values.externalSecrets.enabled }}
+            existingSecret:
+              name: {{ .Values.externalSecrets.name | quote }}
+              keyMapping:
+                password: "NUBUS_NATS_ADMIN_PASSWORD"
+            {{- else }}
             password: {{ .Values.secrets.nats.natsAdminPassword | quote }}
+            {{- end }}
     containerSecurityContext:
       allowPrivilegeEscalation: false
       capabilities:
@@ -1070,7 +1198,14 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningPrefill.tag }}
     nats:
       auth:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_PREFILL_NATS"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword | quote}}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-prefill"
       {{- with .Values.annotations.nubusProvisioning.prefillPod }}
@@ -1089,7 +1224,14 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningUdmTransformer.tag }}
     nats:
       auth:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "NUBUS_PROVISIONING_UDM_TRANSFORMER_NATS"
+        {{- else }}
         password: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword | quote}}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-udm-transformer"
       {{- with .Values.annotations.nubusProvisioning.udmTransformerPod }}
@@ -1174,7 +1316,14 @@ nubusUdmListener:
     {{ .Values.resources.umsUdmListener | toYaml | nindent 4 }}
   nats:
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_PROVISIONING_UDM_LISTENER_NATS"
+      {{- else }}
       password: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword | quote}}
+      {{- end }}
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusUdmListener.serviceAccount | toYaml | nindent 6 }}
@@ -1208,7 +1357,14 @@ nubusSelfServiceConsumer:
     {{- end }}
   provisioningApi:
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SELFSERVICECONSUMER_PROVISIONING_API"
+      {{- else }}
       password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword | quote}}
+      {{- end }}
   resources:
     {{ .Values.resources.umsSelfserviceConsumer | toYaml | nindent 4 }}
   replicaCount: {{ .Values.replicas.umsSelfserviceConsumer }}
@@ -1314,8 +1470,33 @@ nubusStackDataUms:
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusStackDataUms.serviceAccount | toYaml | nindent 6 }}
+  {{- if .Values.externalSecrets.enabled }}
+  # Chart-fork (cosa-systems/ums-stack-data) gates each context-user
+  # password Secret on `existingSecret.name`. When set, the chart skips
+  # emitting its own Secret + omits the matching key from the rendered
+  # context Secret. A `prepare-context` initContainer merges the
+  # externally-provided passwords back into context.yaml at Job runtime.
+  contextUsers:
+    svcPortalServer:
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SYSTEMACCOUNTS_SVC_PORTAL_SERVER"
+    administrator:
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SYSTEMACCOUNTS_ADMINISTRATOR"
+    readonlyUser:
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SYSTEMACCOUNTS_READONLY"
+  {{- end }}
   templateContext:
+    {{- if not .Values.externalSecrets.enabled }}
     initialPasswordAdministrator: {{ .Values.secrets.nubus.systemAccounts.administratorPassword | quote }}
+    {{- end }}
     additionalMailDomains: {{ .Values.global.additionalMailDomains | toYaml | nindent 6 }}
     apps: {{ .Values.apps | toYaml | nindent 6 }}
     defaultGroupOtherObjects: "cn=Domain Users,cn=groups,{{ .Values.ldap.baseDn }}"
@@ -1352,14 +1533,26 @@ nubusStackDataUms:
     oxDefaultContext: "1"
     oxDefaultLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
     oxContextHidden: true
+    {{- if .Values.externalSecrets.enabled }}
+    # LDAP search-user passwords are bootstrap-time values that the
+    # nubus chart writes into LDAP at install. Once bootstrapped the
+    # cluster's `opendesk-internal-credentials.NUBUS_LDAPSEARCH_*`
+    # keys carry the source of truth; consumers (postfix, dovecot,
+    # ...) read from there. The bootstrap itself runs once; on a
+    # rotate, operator updates the LDAP user passwords directly via
+    # ldap-server admin tooling rather than re-rendering.
+    oxSystemUserPassword: ""
+    ldapSearchUsers: []
+    {{- else }}
     oxSystemUserPassword: {{ .Values.secrets.nubus.ldapSearch.ox }}
-    portalOxLinkBase: {{ printf "https://%s.%s" .Values.global.hosts.openxchange .Values.global.domain }}
     ldapSearchUsers:
       {{- range $username, $password := .Values.secrets.nubus.ldapSearch }}
       - username: {{ printf "ldapsearch_%s" $username | quote }}
         password: {{ $password | quote }}
         lastname: "LDAP-Search-User"
       {{- end }}
+    {{- end }}
+    portalOxLinkBase: {{ printf "https://%s.%s" .Values.global.hosts.openxchange .Values.global.domain }}
     ldapSystemUsers: []
     portaltileGroupUserStandard:
       - "cn=Domain Users,cn=groups,{{ .Values.ldap.baseDn }}"
@@ -1494,12 +1687,19 @@ nubusUmcServer:
       auth:
         username: {{ .Values.databases.umsSelfservice.username | quote }}
         database: {{ .Values.databases.umsSelfservice.name | quote }}
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "POSTGRESQL_UMS_SELFSERVICE_USER"
+        {{- else }}
         password: {{ .Values.databases.umsSelfservice.password | default .Values.secrets.postgresql.umsSelfserviceUser | quote }}
         # NOTE: Nubus has still an existing secret configured for legacy reasons.
         # This disables the existing secret and ensures that the value from above
         # is used.
         existingSecret:
           name: null
+        {{- end }}
     authSession:
       connection:
         host: {{ .Values.databases.umsAuthSession.host | quote }}
@@ -1507,12 +1707,19 @@ nubusUmcServer:
       auth:
         username: {{ .Values.databases.umsAuthSession.username | quote }}
         database: {{ .Values.databases.umsAuthSession.name | quote }}
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            password: "POSTGRESQL_UMS_AUTHSESSION_USER"
+        {{- else }}
         password: {{ .Values.databases.umsAuthSession.password | default .Values.secrets.postgresql.umsAuthSessionUser | quote }}
         # NOTE: Nubus has still an existing secret configured for legacy reasons.
         # This disables the existing secret and ensures that the value from above
         # is used.
         existingSecret:
           name: null
+        {{- end }}
   proxy:
     image:
       registry: {{ coalesce .Values.repositories.image.dockerHub .Values.global.imageRegistry .Values.images.nubusUmcServerProxy.registry | quote }}
@@ -1543,7 +1750,14 @@ nubusUmcServer:
       {{ .Values.annotations.nubusUmcServer.serviceAccount | toYaml | nindent 6 }}
   smtp:
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+      {{- else }}
       password: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
+      {{- end }}
 
 nubusUmcGateway:
   containerSecurityContext:
@@ -1628,12 +1842,27 @@ nubusKeycloakBootstrap:
   ldap:
     auth:
       bindDn: {{ printf "uid=ldapsearch_keycloak,cn=users,%s" .Values.ldap.baseDn }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_KEYCLOAK"
+      {{- else }}
       existingSecret:
         name: "ums-keycloak-bootstrap-ldap-opendesk-credentials"
+      {{- end }}
   oidc:
-    rp:
+    relyingParty:
       umcServer:
-        password: {{ .Values.secrets.keycloak.clientSecret.portal | quote }}
+        clientSecret:
+          {{- if .Values.externalSecrets.enabled }}
+          existingSecret:
+            name: {{ .Values.externalSecrets.name | quote }}
+            keyMapping:
+              password: "KEYCLOAK_CLIENTSECRET_PORTAL"
+          {{- else }}
+          password: {{ .Values.secrets.keycloak.clientSecret.portal | quote }}
+          {{- end }}
   podAnnotations:
     intents.otterize.com/service-name: "ums-keycloak-bootstrap"
     {{- with .Values.annotations.nubusKeycloakBootstrapNubus.pod }}
@@ -1654,7 +1883,18 @@ nubusKeycloakBootstrap:
     annotations:
       {{ .Values.annotations.nubusKeycloakBootstrapNubus.serviceAccount | toYaml | nindent 6 }}
 
-# Credential secrets for accessing customer supplied services
+# Credential secrets for accessing customer supplied services. The
+# upstream umbrella chart emits these as helmfile-template-time
+# stringData Secrets; consumer subcharts (keycloak, guardian,
+# keycloak-extensions, keycloak-bootstrap) reference them by name.
+# With externalSecrets on, the umbrella still emits the *empty*
+# Secret skeletons so the chart's existingSecret references resolve,
+# but each consumer needs its existingSecret pointed at
+# `opendesk-internal-credentials` separately (see the per-component
+# `existingSecret.name` references higher up in this file).
+{{- if .Values.externalSecrets.enabled }}
+extraSecrets: []
+{{- else }}
 extraSecrets:
   - name: "ums-opendesk-guardian-client-secret"
     stringData:
@@ -1674,3 +1914,4 @@ extraSecrets:
   - name: "ums-keycloak-bootstrap-ldap-opendesk-credentials"
     stringData:
       password: {{ .Values.secrets.nubus.ldapSearch.keycloak | quote }}
+{{- end }}

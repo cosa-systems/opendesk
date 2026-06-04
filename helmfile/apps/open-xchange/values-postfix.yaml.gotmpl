@@ -54,7 +54,13 @@ postfix:
     baseDn: "{{ .Values.ldap.baseDn }}"
     bindDn: "uid=ldapsearch_postfix,cn=users,{{ .Values.ldap.baseDn }}"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_POSTFIX"
+      {{- else }}
       value: {{ .Values.secrets.nubus.ldapSearch.postfix | quote }}
+      {{- end }}
   messageSizeLimit: {{ mul .Values.functional.groupware.mail.maxSize 1024 1024 | int | printf "%d" | quote }}
   milterDefaultAction: "tempfail"
   listfilter:

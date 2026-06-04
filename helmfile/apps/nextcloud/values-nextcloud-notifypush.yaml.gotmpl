@@ -21,7 +21,13 @@ configuration:
       username:
         value: {{ .Values.cache.nextcloud.username }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "REDIS_PASSWORD"
+        {{- else }}
         value: {{ .Values.cache.nextcloud.password | default .Values.secrets.redis.password | quote }}
+        {{- end }}
     host: {{ .Values.cache.nextcloud.host | quote }}
     port: {{ .Values.cache.nextcloud.port | quote }}
     tls: {{ .Values.cache.nextcloud.tls }}
@@ -40,7 +46,15 @@ configuration:
       username:
         value: {{ .Values.databases.nextcloud.username | quote }}
       password:
-        {{- if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          {{- if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
+          key: "MARIADB_NEXTCLOUD_USER"
+          {{- else }}
+          key: "POSTGRESQL_NEXTCLOUD_USER"
+          {{- end }}
+        {{- else if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
         value: {{ .Values.databases.nextcloud.password | default .Values.secrets.mariadb.nextcloudUser | quote }}
         {{- else if or (eq .Values.databases.nextcloud.type "postgresql") (eq .Values.databases.nextcloud.type "psql") }}
         value: {{ .Values.databases.nextcloud.password | default .Values.secrets.postgresql.nextcloudUser | quote }}

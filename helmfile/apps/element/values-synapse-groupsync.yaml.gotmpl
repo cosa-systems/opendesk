@@ -9,21 +9,43 @@ global:
     {{ .Values.global.imagePullSecrets | toYaml | nindent 4 }}
 
 configuration:
-  asToken: {{ .Values.secrets.matrixGroupsync.synapseAsToken | quote }}
   dryRun: false
-  hsToken: {{ .Values.secrets.matrixGroupsync.synapseAsToken | quote }}
   id: "gps"
   homeserverName: {{ .Values.global.matrixDomain | default .Values.global.domain | quote }}
-  registrationSharedSecret: {{ .Values.secrets.synapse.registrationSharedSecret | quote }}
   runOnce: false
   username: "groupsyncbot"
+  {{- if .Values.externalSecrets.enabled }}
+  # hsToken upstream shares the AS token; same key for both. Chart's
+  # render-config initContainer substitutes the actual values into
+  # config.yaml at startup (from `__AS_TOKEN__`, `__REG_SHARED__`,
+  # `__LDAP_BIND_PASS__` placeholders) so credentials never land in
+  # the rendered ConfigMap.
+  asToken: ""
+  hsToken: ""
+  registrationSharedSecret: ""
+  asTokenExistingSecret:
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "MATRIX_GROUPSYNC_SYNAPSE_AS_TOKEN"
+  registrationSharedSecretExistingSecret:
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "SYNAPSE_REGISTRATION_SHARED_SECRET"
+  ldapBindPasswordExistingSecret:
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "NUBUS_LDAPSEARCH_ELEMENT"
+  {{- else }}
+  asToken: {{ .Values.secrets.matrixGroupsync.synapseAsToken | quote }}
+  hsToken: {{ .Values.secrets.matrixGroupsync.synapseAsToken | quote }}
+  registrationSharedSecret: {{ .Values.secrets.synapse.registrationSharedSecret | quote }}
+  {{- end }}
   ldap:
     attributes:
       name: "description"
       uid: "uid"
     base: {{ .Values.ldap.baseDn | quote }}
     bind_dn: "uid=ldapsearch_element,cn=users,{{ .Values.ldap.baseDn }}"
+    {{- if not .Values.externalSecrets.enabled }}
     bind_password: {{ .Values.secrets.nubus.ldapSearch.element | quote }}
+    {{- end }}
     check_interval_seconds: 60
     type: mapped-ldap
     uri: "ldap://ums-ldap-server:389"

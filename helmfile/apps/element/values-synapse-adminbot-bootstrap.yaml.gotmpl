@@ -12,16 +12,34 @@ configuration:
   username: "adminbot"
   pod: "opendesk-synapse-0"
   secretName: "matrix-adminbot-account"
+  {{- if .Values.externalSecrets.enabled }}
+  passwordExistingSecret:
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "MATRIX_ADMINBOT_PASSWORD"
+  {{- else }}
   password: {{ .Values.secrets.matrixAdminBot.password | quote }}
+  {{- end }}
   pipeConfig:
     enabled: true
     type: "admin"
     secretName: "matrix-adminbot-config"
+    serviceUrl: "http://opendesk-synapse-web:8008"
+    homeserverName: {{ .Values.global.matrixDomain | default .Values.global.domain | quote }}
+    {{- if .Values.externalSecrets.enabled }}
+    asTokenExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "MATRIX_ADMINBOT_SYNAPSE_AS_TOKEN"
+    hsTokenExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "MATRIX_ADMINBOT_SYNAPSE_AS_TOKEN"
+    backupPassphraseExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "MATRIX_ADMINBOT_BACKUP_PASSPHRASE"
+    {{- else }}
     asToken: {{ .Values.secrets.matrixAdminBot.synapseAsToken | quote }}
     hsToken: {{ .Values.secrets.matrixAdminBot.synapseAsToken | quote }}
-    serviceUrl: "http://opendesk-synapse-web:8008"
     backupPassphrase: {{ .Values.secrets.matrixAdminBot.backupPassphrase | quote }}
-    homeserverName: {{ .Values.global.matrixDomain | default .Values.global.domain | quote }}
+    {{- end }}
 image:
   registry: {{ coalesce .Values.repositories.image.dockerHub .Values.global.imageRegistry .Values.images.synapseCreateUser.registry | quote }}
   url: {{ .Values.images.synapseCreateUser.repository | quote }}
