@@ -7,6 +7,14 @@ smtp:
   username: ""
   password: {{ env "SMTP_PASSWORD" | quote }}
   localpartNoReply: "no-reply"
+
+  # Outbound SMTP HELO name (postfix smtp_helo_name). Set to the MTA's egress
+  # identity — the hostname the egress source IPs reverse-resolve to — so the
+  # HELO is forward-confirmed (FCrDNS). Empty -> postfix defaults to
+  # $myhostname. Applied to both postfix instances via postfix.overrides
+  # (postconf -e). Set per-env in the deployment overlay.
+  heloName: ""
+
   spamMilter:
     host: ""
     port: 11332

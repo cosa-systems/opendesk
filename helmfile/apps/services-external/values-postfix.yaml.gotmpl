@@ -55,6 +55,16 @@ postfix:
   amavisPortIn: ""
   domain: {{ .Values.global.mailDomain | default .Values.global.domain | quote }}
   hostname: "postfix"
+  {{- if .Values.smtp.heloName }}
+  # Outbound HELO name via postconf override (smtp_helo_name). Surgical: leaves
+  # myhostname/myorigin alone (this MTA's myhostname is a bare "postfix", but the
+  # banner only matters inbound; outbound it's the client and HELO is what
+  # receivers check). Loaded from /overrides/postfix.cf by the chart's startup
+  # script so the HELO matches the egress IP PTR for FCrDNS.
+  overrides:
+    postfix.cf: |
+      smtp_helo_name={{ .Values.smtp.heloName }}
+  {{- end }}
   inetProtocols: "ipv4"
   ldap:
     host: "ums-ldap-server"

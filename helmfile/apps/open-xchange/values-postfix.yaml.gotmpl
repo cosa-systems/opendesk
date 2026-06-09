@@ -44,6 +44,15 @@ postfix:
   amavisPortIn: ""
   domain: {{ .Values.global.mailDomain | default .Values.global.domain | quote }}
   hostname: {{ .Values.functional.groupware.externalClients.fqdnSmtp | default .Values.global.domain | quote }}
+  {{- if .Values.smtp.heloName }}
+  # Outbound HELO name via postconf override (smtp_helo_name). Surgical: leaves
+  # myhostname/myorigin = cosa.services (so system bounces keep an MX-backed
+  # sender), while the HELO matches the egress IP PTR for FCrDNS. Loaded from
+  # /overrides/postfix.cf by the chart's startup script.
+  overrides:
+    postfix.cf: |
+      smtp_helo_name={{ .Values.smtp.heloName }}
+  {{- end }}
   expansionLimit: {{ .Values.functional.groupware.mail.localLimits.expansion }}
   recursionLimit: {{ .Values.functional.groupware.mail.localLimits.recursion }}
   inetProtocols: "ipv4"
