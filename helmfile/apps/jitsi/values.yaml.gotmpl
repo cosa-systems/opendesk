@@ -260,8 +260,19 @@ jitsi:
       {{- end }}
     resources:
       {{ .Values.resources.jvb | toYaml | nindent 6 }}
+    {{- with .Values.service.nodeSelector.jitsiVideoBridge }}
+    # Pin the JVB pod (e.g. to a dedicated edge node) so it is co-located with
+    # its LoadBalancer IP; required for externalTrafficPolicy: Local to deliver
+    # the UDP media stream on platforms (IONOS Managed K8s) that only route an
+    # LB IP to a node that also runs a pod for the Service.
+    nodeSelector:
+      {{ . | toYaml | nindent 6 }}
+    {{- end }}
     service:
       type: {{ coalesce .Values.service.type.jitsiVideoBridge .Values.cluster.service.type | quote }}
+      {{- with .Values.service.externalTrafficPolicy.jitsiVideoBridge }}
+      externalTrafficPolicy: {{ . | quote }}
+      {{- end }}
       {{- with .Values.service.loadBalancerIp.jitsiVideoBridge }}
       # Reserved public IP for JVB media (UDP 10000); value set per-env in the
       # deployment overlay. The jitsi-jvb-patcher job reads this Service's

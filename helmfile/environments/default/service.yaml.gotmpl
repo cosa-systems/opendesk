@@ -15,4 +15,14 @@ service:
     jitsiVideoBridge: ~
     dovecot: ~
     postfix: ~
+  # Optional externalTrafficPolicy per externally-exposed service. "Local"
+  # preserves the client source IP and is required for IONOS LB IP <-> pod
+  # co-location (the LB IP is only reachable on a node that also runs the pod).
+  # Emitted by the consuming Service template only when set.
+  externalTrafficPolicy:
+    jitsiVideoBridge: ~
+  # Optional pod nodeSelector per component, to co-locate the pod with its LB
+  # IP. Emitted by the consuming workload template only when set.
+  nodeSelector:
+    jitsiVideoBridge: {}
 ...
