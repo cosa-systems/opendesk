@@ -129,8 +129,8 @@ All available apps and their default values are located in `helmfile/environment
 | dkimpy               | `apps.dkimpy.enabled`              | `false`  | Postfix milter for DKIM              |
 | Dovecot              | `apps.dovecot.enabled`             | `true`   | Mail backend                         |
 | Element              | `apps.element.enabled`             | `true`   | Secure communications platform       |
-| Element Admin        | `apps.elementAdmin.enabled`        | `false`  | Element administration console       |
-| Element Groupsync    | `apps.elementGroupsync.enabled`    | `false`  | Matrix group/space directory sync    |
+| Element Admin        | `apps.elementAdmin.enabled`        | `false`  | Element admin console (enterprise‡)  |
+| Element Groupsync    | `apps.elementGroupsync.enabled`    | `false`  | Matrix group/space sync (enterprise‡)|
 | Home                 | `apps.home.enabled`                | `true`   | Base domain portal redirect          |
 | Jitsi                | `apps.jitsi.enabled`               | `true`   | Videoconferencing                    |
 | MariaDB              | `apps.mariadb.enabled`             | `true`   | Database                             |
@@ -150,6 +150,10 @@ All available apps and their default values are located in `helmfile/environment
 | XWiki                | `apps.xwiki.enabled`               | `true`   | Knowledge management                 |
 
 † Enterprise builds (`OPENDESK_ENTERPRISE=true`) default these to `true`.
+‡ Enterprise component: the toggle defaults `false` and isn't enterprise-gated,
+but the image lives in the enterprise registry — enabling it on a Community
+deployment (no `OPENDESK_ENTERPRISE` / private-registry credentials) just
+`ImagePullBackOff`s.
 
 For example, Jitsi can be disabled like this:
 
