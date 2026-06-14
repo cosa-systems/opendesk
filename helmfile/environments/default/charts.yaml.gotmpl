@@ -545,6 +545,15 @@ charts:
     registry: "registry.opencode.de"
     repository: "bmi/opendesk/components/supplier/xwiki/charts-mirror"
     name: "xwiki"
-    version: "1.4.4"
+    # cosa: bumped from upstream OpenDesk's stale 1.4.4 pin. 1.4.4 predates the
+    # chart's customConfigsSecrets mechanism (added in 1.5.0), so in
+    # externalSecrets mode there was no way to inject XWiki's OIDC client secret
+    # (oidc.secret), LDAP bind_pass or workplaceServices.portalSecret — XWiki
+    # booted with an empty client secret and Keycloak SSO silently fell back to
+    # the LDAP-only native login form. 1.6.8 is the latest tag already mirrored
+    # in the same opencode charts-mirror; apps/xwiki/values.yaml.gotmpl wires the
+    # three secrets via customConfigsSecrets. (XML-escaping fix that motivated
+    # the 1.4.4 pin upstream — opencode commit 67a1df0f — carries forward.)
+    version: "1.6.8"
     verify: true
 ...
