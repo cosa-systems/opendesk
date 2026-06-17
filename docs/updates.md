@@ -12,8 +12,18 @@ While [migrations-manual.md](./migrations-manual.md) provides information about 
 
 <!-- TOC -->
 * [Updates and features](#updates-and-features)
-  * [1.18.0](#1180)
+  * [1.19.0](#1190)
+    * [`certificate.yaml.gotmpl`](#certificateyamlgotmpl)
+      * [Upgrade to `opendesk-certificates` v4](#upgrade-to-opendesk-certificates-v4)
+      * [Template `group` in `issuerRef`](#template-group-in-issuerref)
+      * [Allow overriding of `opendesk-certificates` chart options](#allow-overriding-of-opendesk-certificates-chart-options)
+      * [Certificate Trust chain/build support](#certificate-trust-chainbuild-support)
     * [`functional.yaml.gotmpl`](#functionalyamlgotmpl)
+      * [Erasure of the Matrix account data of deleted users](#erasure-of-the-matrix-account-data-of-deleted-users)
+    * [`service.yaml.gotmpl`](#serviceyamlgotmpl)
+      * [Option to set a `loadBalancerIP` for the Jitsi Video Bridge](#option-to-set-a-loadbalancerip-for-the-jitsi-video-bridge)
+  * [1.18.0](#1180)
+    * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-1)
       * [Options to configure the list views of the admin portal](#options-to-configure-the-list-views-of-the-admin-portal)
       * [Identity a user schedules under in a Shared Account's calendar](#identity-a-user-schedules-under-in-a-shared-accounts-calendar)
     * [`migrations.yaml.gotmpl`](#migrationsyamlgotmpl)
@@ -24,7 +34,7 @@ While [migrations-manual.md](./migrations-manual.md) provides information about 
       * [Dedicated mobile logo and touch icon for OpenProject](#dedicated-mobile-logo-and-touch-icon-for-openproject)
       * [Custom fonts for OpenProject's PDF export](#custom-fonts-for-openprojects-pdf-export)
   * [1.17.0](#1170)
-    * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-1)
+    * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-2)
       * [Enable the "Send later" (scheduled mail) feature for OX App Suite](#enable-the-send-later-scheduled-mail-feature-for-ox-app-suite)
       * [Configurable "Remember Me" SSO session timeouts](#configurable-remember-me-sso-session-timeouts)
     * [`helmfile-defaults.yaml.gotmpl`](#helmfile-defaultsyamlgotmpl)
@@ -46,20 +56,119 @@ While [migrations-manual.md](./migrations-manual.md) provides information about 
       * [OpenProject PDF export theming](#openproject-pdf-export-theming)
     * [`technical.yaml.gotmpl`](#technicalyamlgotmpl-2)
       * [Nextcloud worker and memory tuning](#nextcloud-worker-and-memory-tuning)
-    * [`service.yaml.gotmpl`](#serviceyamlgotmpl)
+    * [`service.yaml.gotmpl`](#serviceyamlgotmpl-1)
       * [Option to set a `loadBalancerIp` for Dovecot and Postfix](#option-to-set-a-loadbalancerip-for-dovecot-and-postfix)
     * [`database.yaml.gotmpl`](#databaseyamlgotmpl)
       * [Option to enable SSL/TLS database connection for OX App Suite](#option-to-enable-ssltls-database-connection-for-ox-app-suite)
     * [`cache.yaml.gotmpl`](#cacheyamlgotmpl)
       * [Options to enable SSL/TLS Redis connection for the Intercom Service, Notes, and OX App Suite](#options-to-enable-ssltls-redis-connection-for-the-intercom-service-notes-and-ox-app-suite)
   * [1.15.0](#1150)
-    * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-2)
+    * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-3)
       * [Per user-quota for external sharing](#per-user-quota-for-external-sharing)
       * [Virtual alias limits](#virtual-alias-limits)
     * [`technical.yaml.gotmpl`](#technicalyamlgotmpl-3)
       * [Proxy protocol support for Postfix](#proxy-protocol-support-for-postfix)
       * [Set limitation on maximum number of objects (for tasks, contacts, attachments)](#set-limitation-on-maximum-number-of-objects-for-tasks-contacts-attachments)
 <!-- TOC -->
+
+## 1.19.0
+
+### `certificate.yaml.gotmpl`
+
+#### Upgrade to `opendesk-certificates` v4
+
+Reworking the certificates helm chart to support most of the community requested TLS certificate use-cases.
+
+Read more in [Certificates](./enhanced-configuration/self-signed-certificates.md#certificates) section of
+[enhanced-configuration/self-signed-certificates.md](./enhanced-configuration/self-signed-certificates.md)
+
+#### Template `group` in `issuerRef`
+
+Supporting `cert-manager.io` extensions, the `group` can now be modified and defaults to `group: "cert-manager.io"`.
+
+```yaml
+certificate:
+  issuerRef:
+    name: "letsencrypt-prod"
+    kind: "ClusterIssuer"
+    group: "cert-manager.io"
+```
+
+#### Allow overriding of `opendesk-certificates` chart options
+
+To support the most common TLS certificate use-cases, most options in the `opendesk-certificates` helm chart can now be
+overridden.
+
+```yaml
+certificate:
+  selfSignedOverrides:
+    issuer:
+      create: false
+    caCertificate:
+      create: false
+      secret:
+        value:
+          certificate: ~
+          key: ~
+          truststore: ~
+          keystore: ~
+        name: ""
+    organizations:
+      - "European Company that Makes Everything (ECME) Inc."
+    organizationalUnits:
+      - "Datacenter Operations"
+    privateKey:
+      algorithm: "ECDSA"
+      size: ~
+```
+
+#### Certificate Trust chain/build support
+
+openDesk now has built-in eval support for generating a certificate trust bundle. It composes the public default CA
+bundle with self-signed or organization-signed certificates, so that clients reach the applications through the
+deployment's own certificate while the applications keep trusting endpoints protected by publicly signed
+certificates.
+
+```yaml
+trust:
+  create: false
+  certificateAuthorities:
+    values: {}
+    secret: ""
+  secret:
+    mount: false
+    name: "opendesk-certificates-ca-tls"
+```
+
+Read more in [Trust](./enhanced-configuration/self-signed-certificates.md#trust) section of
+[enhanced-configuration/self-signed-certificates.md](./enhanced-configuration/self-signed-certificates.md)
+
+### `functional.yaml.gotmpl`
+
+#### Erasure of the Matrix account data of deleted users
+
+With openDesk 1.19.0 the Matrix accounts follow the central identity management: A user deleted there has their Matrix account revoked. Whether the account's data is erased along with the deactivation can now be configured:
+
+```yaml
+functional:
+  dataProtection:
+    matrixAccountErasure:
+      enabled: true
+```
+
+`true`, the default, erases the data (GDPR erasure): The profile is dropped and the user's events are marked for redaction, which cannot be undone. `false` only deactivates the account and keeps its data.
+
+### `service.yaml.gotmpl`
+
+#### Option to set a `loadBalancerIP` for the Jitsi Video Bridge
+
+The existing `service.loadBalancerIP` option for Dovecot and Postfix now also covers the Jitsi Video Bridge, so its media endpoint (UDP 10000) can be pinned to a reserved IP when the service type is `LoadBalancer`. The `jitsi-jvb-patcher` job advertises the Service's assigned IP via `JVB_ADVERTISE_IPS`, so a reserved IP keeps the advertised media endpoint stable.
+
+```yaml
+service:
+  loadBalancerIP:
+    jitsiVideoBridge: ~
+```
 
 ## 1.18.0
 
