@@ -98,6 +98,18 @@ customConfigs:
   xwiki.properties:
     {{- if eq (env "OPENDESK_ENTERPRISE") "true" }}
     distribution.defaultUI: "com.xwiki.projects.swp:xwiki-swp-flavor-enterprise-main"
+    {{- else }}
+    # Upstream only sets distribution.defaultUI for the enterprise flavor, so a
+    # Community-Edition deploy installs NO SWP flavor at all
+    # (distribution.job.interactive=false + unset defaultUI -> zero extensions
+    # installed). That leaves the openDesk XWiki app uninstalled AND, critically,
+    # the keycloak-bridge SSO authenticator missing: the community flavor pulls
+    # xwiki-swp-flavor-community-main -> xwiki-swp-wiki-main ->
+    # xwiki-swp-extension-bridge-authenticator (which provides the
+    # `keycloak-bridge-auth` authService set below). Without it XWiki silently
+    # falls back to the native login form (no Keycloak redirect). Point CE at the
+    # community flavor so the bridge authenticator gets installed on startup.
+    distribution.defaultUI: "com.xwiki.projects.swp:xwiki-swp-flavor-community-main"
     {{- end }}
     wikiInitializer.initialRequest.xwiki.url: "https://{{ .Values.global.hosts.xwiki }}.{{ .Values.global.domain }}/distribution/"
     wikiInitializer.initialRequest.xwiki.contextPath: "/"
