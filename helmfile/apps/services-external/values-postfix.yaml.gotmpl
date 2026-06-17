@@ -194,6 +194,13 @@ postfix:
   virtualMailboxDomains: []
   {{- end }}
 
+{{- with .Values.service.nodeSelector.postfix }}
+# Pin postfix to a pool whose nodes carry a reserved egress IP, so outbound
+# mail leaves from a stable, reserved source address (for SPF/PTR). Set
+# per-environment from the deployment overlay.
+nodeSelector:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
 replicaCount: {{ .Values.replicas.postfix }}
 
 resources:
