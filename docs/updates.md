@@ -23,6 +23,7 @@ While [migrations-manual.md](./migrations-manual.md) provides information about 
     * [`service.yaml.gotmpl`](#serviceyamlgotmpl)
       * [Option to set a `loadBalancerIP` for the Jitsi Video Bridge](#option-to-set-a-loadbalancerip-for-the-jitsi-video-bridge)
       * [Option to set the `externalTrafficPolicy` per externally-exposed service](#option-to-set-the-externaltrafficpolicy-per-externally-exposed-service)
+      * [Option to set a pod `nodeSelector` per component](#option-to-set-a-pod-nodeselector-per-component)
   * [1.18.0](#1180)
     * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-1)
       * [Options to configure the list views of the admin portal](#options-to-configure-the-list-views-of-the-admin-portal)
@@ -181,6 +182,17 @@ service:
     jitsiVideoBridge: ~
     dovecot: ~
     postfix: ~
+```
+
+#### Option to set a pod `nodeSelector` per component
+
+A pod `nodeSelector` can now be set for the Jitsi Video Bridge and Postfix, e.g. to co-locate the pod with the node that carries its reserved LoadBalancer or egress IP. Empty (`{}`) leaves scheduling unconstrained.
+
+```yaml
+service:
+  nodeSelector:
+    jitsiVideoBridge: {}
+    postfix: {}
 ```
 
 ## 1.18.0
