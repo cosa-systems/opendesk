@@ -20,4 +20,10 @@ service:
     jitsiVideoBridge: ~
     dovecot: ~
     postfix: ~
+  # Optional pod `nodeSelector` per component, to co-locate a pod with its
+  # reserved LoadBalancer IP. Emitted by the consuming workload template only
+  # when set, so the default rendered output is unchanged.
+  nodeSelector:
+    jitsiVideoBridge: {}
+    postfix: {}
 ...

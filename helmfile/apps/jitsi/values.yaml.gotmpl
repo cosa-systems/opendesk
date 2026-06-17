@@ -249,6 +249,13 @@ jitsi:
       existingSecretName: {{ .Values.secrets.jitsi.jvbAuthPassword.name | quote }}
     resources:
       {{ .Values.resources.jvb | toYaml | nindent 6 }}
+    {{- with .Values.service.nodeSelector.jitsiVideoBridge }}
+    # Co-locate the JVB pod with its reserved LoadBalancer IP; required for
+    # externalTrafficPolicy: Local to deliver the UDP media stream on platforms
+    # that only route an LB IP to a node that also runs a pod for the Service.
+    nodeSelector:
+      {{ . | toYaml | nindent 6 }}
+    {{- end }}
     service:
       type: {{ coalesce .Values.service.type.jitsiVideoBridge .Values.cluster.service.type | quote }}
       {{- with .Values.service.externalTrafficPolicy.jitsiVideoBridge }}
