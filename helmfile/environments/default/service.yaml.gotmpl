@@ -11,4 +11,13 @@ service:
     jitsiVideoBridge: ~
     dovecot: ~
     postfix: ~
+  # Optional `externalTrafficPolicy` per externally-exposed service. "Local"
+  # preserves the client source IP and is required on platforms where a
+  # LoadBalancer IP is only reachable on a node that also runs the Service's
+  # pod. Emitted by the consuming Service template only when set, so the
+  # default rendered output is unchanged.
+  externalTrafficPolicy:
+    jitsiVideoBridge: ~
+    dovecot: ~
+    postfix: ~
 ...
