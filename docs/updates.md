@@ -22,6 +22,7 @@ While [migrations-manual.md](./migrations-manual.md) provides information about 
       * [Erasure of the Matrix account data of deleted users](#erasure-of-the-matrix-account-data-of-deleted-users)
     * [`service.yaml.gotmpl`](#serviceyamlgotmpl)
       * [Option to set a `loadBalancerIP` for the Jitsi Video Bridge](#option-to-set-a-loadbalancerip-for-the-jitsi-video-bridge)
+      * [Option to set the `externalTrafficPolicy` per externally-exposed service](#option-to-set-the-externaltrafficpolicy-per-externally-exposed-service)
   * [1.18.0](#1180)
     * [`functional.yaml.gotmpl`](#functionalyamlgotmpl-1)
       * [Options to configure the list views of the admin portal](#options-to-configure-the-list-views-of-the-admin-portal)
@@ -168,6 +169,18 @@ The existing `service.loadBalancerIP` option for Dovecot and Postfix now also co
 service:
   loadBalancerIP:
     jitsiVideoBridge: ~
+```
+
+#### Option to set the `externalTrafficPolicy` per externally-exposed service
+
+The `externalTrafficPolicy` of the externally-exposed Services can now be set. `"Local"` preserves the client source IP and is required on platforms where a LoadBalancer IP is only reachable on the node that runs the Service's pod. Unset leaves the Kubernetes default (`Cluster`).
+
+```yaml
+service:
+  externalTrafficPolicy:
+    jitsiVideoBridge: ~
+    dovecot: ~
+    postfix: ~
 ```
 
 ## 1.18.0
