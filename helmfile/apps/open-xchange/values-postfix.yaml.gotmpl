@@ -269,6 +269,9 @@ service:
     annotations:
       {{ .Values.annotations.openxchangePostfix.serviceExternal | toYaml | nindent 6 }}
     type: {{ coalesce .Values.service.type.postfix .Values.cluster.service.type | quote }}
+    {{- with .Values.service.externalTrafficPolicy.postfix }}
+    externalTrafficPolicy: {{ . | quote }}
+    {{- end }}
     ports:
       smtp: {{ if .Values.functional.groupware.exposeSmtp }}{port: 25}{{ else }}~{{ end }}
       submission: {{ if .Values.functional.groupware.externalClients.exposeSubmission }}{port: 587}{{ else }}~{{ end }}
