@@ -191,6 +191,12 @@ service:
     annotations:
       {{ .Values.annotations.openxchangePostfix.serviceExternal | toYaml | nindent 6 }}
     type: {{ coalesce .Values.service.type.postfix .Values.cluster.service.type | quote }}
+    {{- with .Values.service.loadBalancerIp.postfix }}
+    # Reserved public IP for inbound SMTP; value set per-env in the deployment
+    # overlay. A stable IP keeps the MX A record + PTR/rDNS valid once inbound
+    # mail is wired.
+    loadBalancerIP: {{ . | quote }}
+    {{- end }}
     ports:
       smtp: {{ if .Values.functional.groupware.exposeSmtp }}{port: 25}{{ else }}~{{ end }}
       submission: {{ if .Values.functional.groupware.externalClients.exposeSubmission }}{port: 587}{{ else }}~{{ end }}

@@ -7,4 +7,12 @@ service:
     jitsiVideoBridge: ~
     dovecot: ~
     postfix: ~
+  # Optional reserved LoadBalancer IPs for the externally-exposed services.
+  # Left unset by default (ephemeral cloud-assigned IP); set per-environment
+  # from the deployment overlay (e.g. cloud repo) to pin a reserved IP. The
+  # consuming Service templates only emit `loadBalancerIP` when a value is set.
+  loadBalancerIp:
+    jitsiVideoBridge: ~
+    dovecot: ~
+    postfix: ~
 ...
