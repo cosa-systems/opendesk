@@ -51,7 +51,20 @@ ics:
         secret: {{ .Values.secrets.intercom.secret.key | quote }}
   issuerBaseUrl: "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/{{ .Values.platform.realm }}"
   originRegex: "{{ .Values.global.domain }}"
-  enableSessionCookie: true
+  # Use a rolling (not transient) session cookie so the session has a
+  # server-side expiry that can be aligned to the Keycloak SSO session.
+  # With a transient cookie (enableSessionCookie: true) `sessionRollingDuration`
+  # is ignored and the cookie is meant to die on browser close — but browser
+  # session-restore persists it, so it outlives the SSO session and the BFF
+  # gets stuck doing failing prompt=none silent logins (empty portal nav until
+  # cookies are wiped). A rolling session expires on idle instead.
+  enableSessionCookie: false
+  # Expire the intercom session after the same idle window as the Keycloak SSO
+  # session (functional.authentication.realmSettings.ssoSessionIdleTimeout,
+  # 14400s/4h). Must be <= SSO idle: a longer value would outlive the SSO
+  # session on an idle gap and re-trigger the stuck-nav state. When the session
+  # expires intercom escalates to an interactive login -> fresh SSO session.
+  sessionRollingDuration: 14400
   userUniqueMapper: {{ if .Values.functional.chat.matrix.profile.useImmutableIdentifierForLocalpart }}"opendesk_objectid"{{ else }}"opendesk_username"{{ end }}
   usernameClaim: "opendesk_username"
   logLevel: {{ if .Values.debug.enabled }}"DEBUG"{{ else }}"INFO"{{ end }}
