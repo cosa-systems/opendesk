@@ -1479,11 +1479,14 @@ nubusStackDataUms:
     annotations:
       {{ .Values.annotations.nubusStackDataUms.serviceAccount | toYaml | nindent 6 }}
   {{- if .Values.externalSecrets.enabled }}
-  # Chart-fork (cosa-systems/ums-stack-data) gates each context-user
-  # password Secret on `existingSecret.name`. When set, the chart skips
-  # emitting its own Secret + omits the matching key from the rendered
-  # context Secret. A `prepare-context` initContainer merges the
-  # externally-provided passwords back into context.yaml at Job runtime.
+  # Chart-fork (cosa-systems/ums-stack-data >= 0.102.5-cosa.3) gates each
+  # context-user password on `existingSecret.name` over an open `contextUsers`
+  # map. When set, the chart skips emitting its own Secret + omits the matching
+  # key (`contextKey`) from the rendered context Secret; a `prepare-context`
+  # initContainer merges the externally-provided passwords into context.yaml at
+  # Job runtime. svcPortalServer/administrator/readonlyUser inherit their
+  # contextKey from the chart defaults; oxSystemUser is OpenDesk-specific so we
+  # add the whole entry here (the chart stays OX-agnostic).
   contextUsers:
     svcPortalServer:
       existingSecret:
@@ -1500,7 +1503,195 @@ nubusStackDataUms:
         name: {{ .Values.externalSecrets.name | quote }}
         keyMapping:
           password: "NUBUS_SYSTEMACCOUNTS_READONLY"
+    # OX system user (opendesk-system) created by the OX data-file extension.
+    # Merge-only: must equal the OX app's LDAP bind password (values-openxchange
+    # ldapauth.properties bindDNPassword = NUBUS_LDAPSEARCH_OX).
+    oxSystemUser:
+      contextKey: "oxSystemUserPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_OX"
+    # OpenDesk per-app LDAP *bind* (search) service accounts. In externalSecrets
+    # mode the upstream `ldapSearchUsers` list is emptied (see templateContext
+    # below), so the umbrella never creates these accounts. We re-provision them
+    # via `stackDataUms.extraDataFiles` further down; each entry here projects the
+    # matching cluster Secret key into the data-loader context as
+    # `ldapsearch<App>Password`. Keycloak's is the critical one: without it the
+    # Keycloak LDAP federation bind fails (LDAP error 49) and every login returns
+    # user_not_found. `ox` IS required (despite oxSystemUser also carrying the
+    # NUBUS_LDAPSEARCH_OX password): OX binds as uid=ldapsearch_ox in BOTH
+    # ldapauth.properties and the contact-picker ldap-client-config.yml. Without
+    # the account the contactsLdapClient pool never registers (LDAP error 49),
+    # so Entity2ACL can't resolve IMAP-login UUIDs -> mail-folder creation errors
+    # ("Benutzer ... konnte nicht ... gefunden werden") and the LDAP-backed
+    # global address book / shared-mailbox contacts break. oxSystemUser stays
+    # merge-only (it does not create an LDAP bind account).
+    ldapsearchKeycloak:
+      contextKey: "ldapsearchKeycloakPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_KEYCLOAK"
+    ldapsearchNextcloud:
+      contextKey: "ldapsearchNextcloudPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_NEXTCLOUD"
+    ldapsearchDovecot:
+      contextKey: "ldapsearchDovecotPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_DOVECOT"
+    ldapsearchElement:
+      contextKey: "ldapsearchElementPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_ELEMENT"
+    ldapsearchPostfix:
+      contextKey: "ldapsearchPostfixPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_POSTFIX"
+    ldapsearchOpenproject:
+      contextKey: "ldapsearchOpenprojectPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_OPENPROJECT"
+    ldapsearchXwiki:
+      contextKey: "ldapsearchXwikiPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_XWIKI"
+    ldapsearchOx:
+      contextKey: "ldapsearchOxPassword"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_OX"
   {{- end }}
+  {{- if .Values.externalSecrets.enabled }}
+  # Re-provision the per-app LDAP bind service accounts that the emptied
+  # `ldapSearchUsers` list (templateContext, externalSecrets branch) no longer
+  # creates. Each password is resolved by the data-loader from the context var
+  # projected by the matching `contextUsers` entry above. Keycloak is first so a
+  # later record can never block the login-critical account.
+  #
+  # `action: create` (not create_or_modify): the data-loader's create_or_modify
+  # path requires a `name` property and only handles users/user + groups/group,
+  # but these are users/ldap bind accounts (the same module the upstream
+  # `readonly` + OX-system accounts use). `create` is create-only, which is fine
+  # here — the accounts don't exist yet, and password rotation is out-of-band
+  # (ldap admin tooling), matching how readonly/administrator are handled. No
+  # group membership: like `readonly`, default UCS authenticated-read covers the
+  # federation search.
+  #
+  # The `password:` lines below look over-escaped on purpose: the chart runs
+  # Helm `tpl` over extraDataFiles (configmap-data.yaml), so a value has to pass
+  # THREE template engines and only be resolved by the last — helmfile gotmpl
+  # (render), Helm `tpl` (chart), then the data-loader jinja (Job runtime, which
+  # resolves the projected context var). Each wrapper escapes one earlier engine
+  # so only the data-loader sees a bare jinja reference. A dedicated
+  # `extraDataFilesRaw` (non-tpl) knob in the stack-data-ums fork would remove
+  # the need for this — tracked as a follow-up cleanup.
+  stackDataUms:
+    extraDataFiles:
+      "89-opendesk-ldapsearch-users.yaml": |
+        # Provisioned by the OpenDesk cloud overlay (cosa-systems): LDAP bind
+        # (search) service accounts for the per-app integrations.
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_keycloak"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchKeycloakPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_nextcloud"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchNextcloudPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_dovecot"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchDovecotPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_element"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchElementPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_postfix"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchPostfixPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_openproject"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchOpenprojectPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_xwiki"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchXwikiPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_ox"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchOxPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+  {{- end }}
+  # With externalSecrets the chart must not bake administrator_password into
+  # <release>-nubus-credentials. create=false suppresses that Secret; it is
+  # provisioned out-of-band (SOPS-encrypted manifest) under the same name +
+  # key. Requires nubus >= 1.19.2-cosa.3 (administratorPasswordSecret flag).
+  administratorPasswordSecret:
+    create: {{ not .Values.externalSecrets.enabled }}
   templateContext:
     {{- if not .Values.externalSecrets.enabled }}
     initialPasswordAdministrator: {{ .Values.secrets.nubus.systemAccounts.administratorPassword | quote }}
