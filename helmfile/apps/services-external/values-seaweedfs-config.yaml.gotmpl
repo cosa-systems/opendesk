@@ -2,6 +2,13 @@
 # SPDX-FileCopyrightText: 2023 Bundesministerium des Innern und für Heimat, PG ZenDiS "Projektgruppe für Aufbau ZenDiS"
 # SPDX-License-Identifier: Apache-2.0
 ---
+{{- if .Values.externalSecrets.enabled }}
+# When set, the chart skips emitting its own Secret and consumers
+# read from the cluster Secret at the same name (provisioned
+# out-of-band). The inline admin/identities below stay as defaults.
+existingSecret:
+  name: "seaweedfs-config"
+{{- end }}
 admin:
   accessKey: "admin"
   secretKey: "{{ .Values.secrets.minio.rootPassword }}"

@@ -59,7 +59,13 @@ image:
 
 settings:
   jwtAppSecret:
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "JITSI_JWT_APP_SECRET"
+    {{- else }}
     value: {{ .Values.secrets.jitsi.jwtAppSecret | quote }}
+    {{- end }}
   keycloakRealm: {{ .Values.platform.realm | quote }}
   keycloakClientId: "opendesk-jitsi"
 
@@ -127,10 +133,18 @@ jitsi:
     {{- range .Values.global.imagePullSecrets }}
       - name: {{ . | quote }}
     {{- end }}
+    {{- if .Values.externalSecrets.enabled }}
+    # JWT_APP_SECRET comes from `prosody.jwt.existingSecretName` below;
+    # the upstream jitsi-meet chart wires the env automatically.
+    jwt:
+      existingSecretName: "opendesk-jitsi-credentials"
+    {{- end }}
     extraEnvs:
       AUTH_TYPE: "hybrid_matrix_token"
       JWT_APP_ID: "{{ .Values.global.hosts.jitsi }}.{{ .Values.global.domain }}"
+      {{- if not .Values.externalSecrets.enabled }}
       JWT_APP_SECRET: {{ .Values.secrets.jitsi.jwtAppSecret | quote }}
+      {{- end }}
       MATRIX_UVS_SYNC_POWER_LEVELS: "true"
       MATRIX_UVS_URL: "http://opendesk-matrix-user-verification-service.{{ .Release.Namespace }}.svc.{{ .Values.cluster.networking.domain }}"
       TURNS_HOST: {{ .Values.turn.tls.host | quote }}
@@ -165,8 +179,12 @@ jitsi:
       tag: {{ .Values.images.jicofo.tag | quote }}
       pullPolicy: {{ .Values.global.imagePullPolicy | quote }}
     xmpp:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecretName: "opendesk-jitsi-credentials"
+      {{- else }}
       password: {{ .Values.secrets.jitsi.jicofoAuthPassword | quote }}
       componentSecret: {{ .Values.secrets.jitsi.jicofoComponentPassword | quote }}
+      {{- end }}
     resources:
       {{ .Values.resources.jicofo | toYaml | nindent 6 }}
     securityContext:
@@ -200,7 +218,11 @@ jitsi:
       JIGASI_SIP_TRANSPORT: {{ .Values.sip.jigasi.transport | quote }}
       JIGASI_SIP_URI: {{ .Values.sip.jigasi.uri | quote }}
     xmpp:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecretName: "opendesk-jitsi-credentials"
+      {{- else }}
       password: {{ .Values.secrets.jitsi.jigasiXmppPassword | quote }}
+      {{- end }}
     resources:
       {{ .Values.resources.jigasi | toYaml | nindent 6 }}
     securityContext:
@@ -231,7 +253,11 @@ jitsi:
       tag: {{ .Values.images.jvb.tag | quote }}
       pullPolicy: {{ .Values.global.imagePullPolicy | quote }}
     xmpp:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecretName: "opendesk-jitsi-credentials"
+      {{- else }}
       password: {{ .Values.secrets.jitsi.jvbAuthPassword | quote }}
+      {{- end }}
     resources:
       {{ .Values.resources.jvb | toYaml | nindent 6 }}
     service:
@@ -272,9 +298,17 @@ jitsi:
       tag: {{ .Values.images.jibri.tag | quote }}
       pullPolicy: {{ .Values.global.imagePullPolicy | quote }}
     recorder:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecretName: "opendesk-jitsi-credentials"
+      {{- else }}
       password: {{ .Values.secrets.jitsi.jibriRecorderPassword | quote }}
+      {{- end }}
     xmpp:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecretName: "opendesk-jitsi-credentials"
+      {{- else }}
       password: {{ .Values.secrets.jitsi.jibriXmppPassword | quote }}
+      {{- end }}
     resources:
       {{ .Values.resources.jibri | toYaml | nindent 6 }}
     securityContext:

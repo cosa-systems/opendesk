@@ -24,18 +24,42 @@ config:
     fileshareName: "Nextcloud at {{ .Values.global.domain }}"
     admin:
       username:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "OPENPROJECT_API_ADMIN_USERNAME"
+        {{- else }}
         value: {{ .Values.secrets.openproject.apiAdminUsername | quote }}
+        {{- end }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "OPENPROJECT_API_ADMIN_PASSWORD"
+        {{- else }}
         value: {{ .Values.secrets.openproject.apiAdminPassword | quote }}
+        {{- end }}
   nextcloud:
     admin:
       username:
         value: "nextcloud"
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "NEXTCLOUD_ADMIN_PASSWORD"
+        {{- else }}
         value: {{ .Values.secrets.nextcloud.adminPassword | quote }}
+        {{- end }}
     status:
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "NEXTCLOUD_STATUS_PASSWORD"
+        {{- else }}
         value: {{ .Values.secrets.nextcloud.statusPassword | quote }}
+        {{- end }}
 
 containerSecurityContext:
   allowPrivilegeEscalation: false

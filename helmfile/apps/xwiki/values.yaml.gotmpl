@@ -26,11 +26,29 @@ javaOpts:
   {{- if .Values.certificate.selfSigned }}
   - "-Djavax.net.ssl.trustStore=/etc/ssl/certs/truststore.jks"
   - "-Djavax.net.ssl.trustStoreType=jks"
+  {{- if not .Values.externalSecrets.enabled }}
   - {{ printf "%s=%s" "-Djavax.net.ssl.trustStorePassword" .Values.secrets.certificates.password | quote }}
+  {{- end }}
   {{- end }}
 
 externalDB:
-  {{- if eq .Values.databases.xwiki.type "mariadb" }}
+  {{- if .Values.externalSecrets.enabled }}
+  customKeyRef:
+    enabled: true
+    # The xwiki chart reads externalDB.customKeyRef.key (flat — see
+    # templates/_helpers.tpl "xwiki.database.env"); nesting it under
+    # `password:` left the rendered secretKeyRef.key empty (invalid).
+    # mariadb password lives in the consolidated secret; the postgres
+    # password lives in db-passwords/PG_XWIKI (set by the db-bootstrap job,
+    # so the chart connects with the same value the role was created with).
+    {{- if eq .Values.databases.xwiki.type "mariadb" }}
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "MARIADB_XWIKI_USER"
+    {{- else }}
+    name: {{ .Values.externalSecrets.dbSecretName | quote }}
+    key: "PG_XWIKI"
+    {{- end }}
+  {{- else if eq .Values.databases.xwiki.type "mariadb" }}
   password: {{ .Values.databases.xwiki.password | default .Values.secrets.mariadb.rootPassword | quote }}
   {{- else }}
   password: {{ .Values.databases.xwiki.password | default .Values.secrets.postgresql.xwikiUser | quote }}
@@ -38,8 +56,10 @@ externalDB:
   database: {{ .Values.databases.xwiki.name | quote }}
   user: {{ .Values.databases.xwiki.username | quote }}
   host: {{ printf "%s:%d" .Values.databases.xwiki.host .Values.databases.xwiki.port | quote }}
+  {{- if not .Values.externalSecrets.enabled }}
   customKeyRef:
     enabled: false
+  {{- end }}
 
 securityContext:
   enabled: true
@@ -70,7 +90,7 @@ customConfigs:
     xwiki.authentication.ldap.photo_attribute: "jpegPhoto"
     ## Enable the synchronization of the LDAP profile picture
     xwiki.authentication.ldap.update_photo: 1
-    {{ if .Values.debug.enabled }}
+    {{ if and .Values.debug.enabled (not .Values.externalSecrets.enabled) }}
     ## Password of "superadmin" user, disables account if not password is set
     xwiki.superadminpassword: {{ .Values.secrets.xwiki.superadminpassword | quote }}
     {{ end }}
@@ -79,7 +99,9 @@ customConfigs:
     xwiki.authentication.ldap.port: 389
     ## Authentication to the LDAP server
     xwiki.authentication.ldap.bind_DN: "uid=ldapsearch_xwiki,cn=users,{{ .Values.ldap.baseDn }}"
+    {{- if not .Values.externalSecrets.enabled }}
     xwiki.authentication.ldap.bind_pass: {{ .Values.secrets.nubus.ldapSearch.xwiki | quote }}
+    {{- end }}
     ## Base DN used for searching for users
     xwiki.authentication.ldap.base_DN: "{{ .Values.ldap.baseDn }}"
     ## Allow short update cycles of the LDAP group cache
@@ -100,7 +122,9 @@ customConfigs:
     oidc.logoutMechanism: "rpInitiated"
     oidc.provider: "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/opendesk"
     oidc.scope: "openid,opendesk-xwiki-scope"
+    {{- if not .Values.externalSecrets.enabled }}
     oidc.secret: {{ .Values.secrets.keycloak.clientSecret.xwiki | quote }}
+    {{- end }}
     oidc.skipped: false
     oidc.user.nameFormater: "${oidc.user.opendesk_username._clean}"
     oidc.user.subjectFormater: "${oidc.user.opendesk_username}"
@@ -112,11 +136,43 @@ customConfigs:
     url.trustedDomains: "{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}"
     workplaceServices.navigationEndpoint: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}/univention/portal/navigation.json"
     workplaceServices.base: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}"
+    {{- if not .Values.externalSecrets.enabled }}
     workplaceServices.portalSecret: {{ .Values.secrets.centralnavigation.apiKey | quote }}
+    {{- end }}
     openoffice.serverType: "0"
     openoffice.autoStart: "false"
     openoffice.homePath: "/tmp"
     notifications.emails.live.graceTime: "5"
+
+{{- if .Values.externalSecrets.enabled }}
+# In externalSecrets mode the inline `oidc.secret`, LDAP `bind_pass` and
+# `workplaceServices.portalSecret` above are guarded out (they would otherwise
+# bake MASTER_PASSWORD-derived literals into the configmap). Nothing else
+# re-supplies them, so XWiki starts with an EMPTY oidc client secret and cannot
+# complete the OIDC token exchange — Keycloak SSO then silently falls back to
+# the LDAP-only native login form (which most users have no password for).
+# The chart's customConfigsSecrets mechanism re-injects each value at init:
+# the property is written with the upper/sanitised key as a placeholder, an
+# env var of that name is sourced via secretKeyRef from the consolidated
+# cluster Secret, and the init container sed-substitutes the value into the
+# config file before XWiki starts (see templates/initialization-secrets.yaml
+# + _helpers.tpl "xwiki.initScripts").
+customConfigsSecrets:
+  xwiki.properties:
+    oidc.secret:
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "KEYCLOAK_CLIENTSECRET_XWIKI"
+    workplaceServices.portalSecret:
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "CENTRALNAVIGATION_API_KEY"
+  xwiki.cfg:
+    xwiki.authentication.ldap.bind_pass:
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_XWIKI"
+{{- end }}
 
 ingress:
   enabled: {{ .Values.ingress.enabled }}
@@ -179,7 +235,9 @@ properties:
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.port": 587
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.properties": "mail.smtp.starttls.enable=true"
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.username": {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
+  {{- if not .Values.externalSecrets.enabled }}
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.password": {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
+  {{- end }}
   ## Link LDAP users and users authenticated through OIDC
   "property:xwiki:LDAPUserImport.WebHome^LDAPUserImport.LDAPUserImportConfigClass.addOIDCObject": 1
   "property:xwiki:LDAPUserImport.WebHome^LDAPUserImport.LDAPUserImportConfigClass.OIDCIssuer": "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/{{ .Values.platform.realm }}"

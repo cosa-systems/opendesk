@@ -22,7 +22,18 @@ migrations:
   loglevel: {{ if .Values.debug.enabled }}"DEBUG"{{ else }}"INFO"{{ end }}
   failOnUnexpectedState: true
   environmentDetails:
-    {{ ( omit .Values "theme" "functional" ) | toYaml | nindent 4 }}
+    {{- /* On the externalSecrets-enabled render path the `secrets:`
+           value tree contains only placeholder strings derived from a
+           dummy master password — useless to the migration runner and
+           a false-positive for downstream "no inline credential"
+           guards. Omit it; the migration runner that needs real
+           credentials reads them from the cluster-side Secrets at
+           apply time via the chart's `existingSecret` knobs.  */}}
+    {{- $details := omit .Values "theme" "functional" }}
+    {{- if .Values.externalSecrets.enabled }}
+      {{- $details = omit $details "secrets" }}
+    {{- end }}
+    {{ $details | toYaml | nindent 4 }}
   cleanup: false
 
 containerSecurityContext:

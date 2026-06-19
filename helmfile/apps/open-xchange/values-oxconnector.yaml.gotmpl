@@ -44,7 +44,14 @@ openXchange:
   oxLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
   auth:
     username: "admin"
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      keyMapping:
+        password: "OXAPPSUITE_ADMIN_PASSWORD"
+    {{- else }}
     password: {{ .Values.secrets.oxAppSuite.adminPassword | quote }}
+    {{- end }}
   oxSmtpServer: "smtp://127.0.0.1:587"
   oxSoapServer: {{ printf "http://%s.%s.svc.%s" "open-xchange-core-mw-admin" (.Values.apps.oxAppSuite.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
 
@@ -53,7 +60,14 @@ provisioningApi:
     baseUrl: {{ printf "http://%s.%s.svc.%s" "ums-provisioning-api" (.Values.apps.nubus.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
   auth:
     username: "ox-connector"
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      keyMapping:
+        password: "OXCONNECTOR_PROVISIONING_API_PASSWORD"
+    {{- else }}
     password: {{ .Values.secrets.oxConnector.provisioningApiPassword | quote }}
+    {{- end }}
 
 resources:
   {{ .Values.resources.oxConnector | toYaml | nindent 2 }}

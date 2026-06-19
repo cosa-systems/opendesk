@@ -27,7 +27,13 @@ configuration:
     username:
       value: "nextcloud"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NEXTCLOUD_ADMIN_PASSWORD"
+      {{- else }}
       value: {{ .Values.secrets.nextcloud.adminPassword | quote }}
+      {{- end }}
 
   antivirus:
     enabled: true
@@ -49,7 +55,13 @@ configuration:
       username:
         value: {{ .Values.cache.nextcloud.username }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "REDIS_PASSWORD"
+        {{- else }}
         value: {{ .Values.cache.nextcloud.password | default .Values.secrets.redis.password | quote }}
+        {{- end }}
     host: {{ .Values.cache.nextcloud.host | quote }}
     port: {{ .Values.cache.nextcloud.port | quote }}
     tls: {{ .Values.cache.nextcloud.tls }}
@@ -103,7 +115,16 @@ configuration:
       username:
         value: {{ .Values.databases.nextcloud.username | quote }}
       password:
-        {{- if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          {{- if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "MARIADB_NEXTCLOUD_USER"
+          {{- else }}
+          name: {{ .Values.externalSecrets.dbSecretName | quote }}
+          key: "PG_NEXTCLOUD"
+          {{- end }}
+        {{- else if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
         value: {{ .Values.databases.nextcloud.password | default .Values.secrets.mariadb.nextcloudUser | quote }}
         {{- else if or (eq .Values.databases.nextcloud.type "postgresql") (eq .Values.databases.nextcloud.type "psql") }}
         value: {{ .Values.databases.nextcloud.password | default .Values.secrets.postgresql.nextcloudUser | quote }}
@@ -122,15 +143,31 @@ configuration:
     host: {{ .Values.ldap.host | quote }}
     dn: "uid=ldapsearch_nextcloud,cn=users,{{ .Values.ldap.baseDn }}"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_NEXTCLOUD"
+      {{- else }}
       value: {{ .Values.secrets.nubus.ldapSearch.nextcloud | quote }}
+      {{- end }}
     adminGroupName: "managed-by-attribute-FileshareAdmin"
 
   objectstore:
     auth:
       accessKey:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: "opendesk-s3-credentials"
+          key: "access-key-id"
+        {{- else }}
         value: {{ .Values.objectstores.nextcloud.username | quote }}
+        {{- end }}
       secretKey:
-        {{- if .Values.objectstores.nextcloud.secretKey }}
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: "opendesk-s3-credentials"
+          key: "secret-access-key"
+        {{- else if .Values.objectstores.nextcloud.secretKey }}
         value: {{ .Values.objectstores.nextcloud.secretKey | quote }}
         {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
         value: {{ .Values.secrets.minio.nextcloudUser | quote }}
@@ -157,7 +194,13 @@ configuration:
     username:
       value: "opendesk-nextcloud"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "KEYCLOAK_CLIENTSECRET_NCOIDC"
+      {{- else }}
       value: {{ .Values.secrets.keycloak.clientSecret.ncoidc | quote }}
+      {{- end }}
 
   opendeskIntegration:
     centralNavigation:
@@ -165,7 +208,13 @@ configuration:
       username:
         value: "opendesk_username"
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "CENTRALNAVIGATION_API_KEY"
+        {{- else }}
         value: {{ .Values.secrets.centralnavigation.apiKey | quote }}
+        {{- end }}
     oxAppSuite:
       enabled: {{ .Values.apps.oxAppSuite.enabled }}
 
@@ -189,7 +238,13 @@ configuration:
       username:
         value: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+        {{- else }}
         value: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
+        {{- end }}
     host: {{ printf "%s.%s.svc.%s" "postfix" (.Values.apps.postfix.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
     port: 587
     fromAddress: {{ .Values.smtp.localpartNoReply | quote }}
@@ -205,7 +260,13 @@ configuration:
 
   serverinfo:
     token:
+      {{- if .Values.externalSecrets.enabled }}
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NEXTCLOUD_METRICS_TOKEN"
+      {{- else }}
       value: {{ .Values.secrets.nextcloud.metricsToken | quote }}
+      {{- end }}
 
   forbiddenChars: {{ join " " .Values.functional.filestore.naming.forbiddenChars | quote }}
 

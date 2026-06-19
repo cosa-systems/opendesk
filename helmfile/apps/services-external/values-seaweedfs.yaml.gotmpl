@@ -145,8 +145,14 @@ admin:
   replicas: 1
   masters: "seaweedfs-all-in-one:9333"
   secret:
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret: {{ .Values.externalSecrets.name | quote }}
+    adminUserSecretKey: "SEAWEEDFS_ADMIN_USER"
+    adminPasswordSecretKey: "SEAWEEDFS_ADMIN_PASSWORD"
+    {{- else }}
     adminUser: "admin"
     adminPassword: {{ .Values.secrets.minio.rootPassword | quote }}
+    {{- end }}
   data:
     type: "persistentVolumeClaim"
     storageClass: {{ coalesce .Values.persistence.storages.seaweedfsAdmin.storageClassName .Values.persistence.storageClassNames.RWO | quote }}

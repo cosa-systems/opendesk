@@ -10,7 +10,13 @@ configuration:
   username: "uvs"
   pod: "opendesk-synapse-0"
   secretName: "opendesk-matrix-user-verification-service-account"
+  {{- if .Values.externalSecrets.enabled }}
+  passwordExistingSecret:
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "MATRIX_USERVERIFICATIONSERVICE_PASSWORD"
+  {{- else }}
   password: {{ .Values.secrets.matrixUserVerificationService.password | quote }}
+  {{- end }}
 
 global:
   imagePullSecrets:
