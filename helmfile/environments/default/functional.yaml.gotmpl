@@ -326,6 +326,15 @@ functional:
         # Toggle the availability of OX Guard
         # Ref.: https://www.open-xchange.com/products/ox-guard/
         enabled: true
+      # "Send later" / scheduled-mail composer feature. Off by default; opt in
+      # per deployment. When enabled this grants the scheduled_mail capability,
+      # turns on the scheduledmail.properties backend toggle (with
+      # requireMasterAuth=false, required under passwordSource=session), and
+      # sets the core-ui scheduleSend feature flag so the composer "Send later"
+      # button surfaces.
+      # Ref.: https://documentation.open-xchange.com/components/middleware/config/8/#mode=search&term=com.openexchange.mail.scheduled.enabled
+      scheduledSend:
+        enabled: false
       # Control options for handling incoming emails
       inbound:
         # Allow users to configure a notification address that receives a notification whenever a new email arrives
