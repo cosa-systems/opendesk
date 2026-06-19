@@ -9,9 +9,14 @@ global:
     {{ .Values.global.imagePullSecrets | toYaml | nindent 4 }}
 
 image:
-  registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.opendeskKeycloakBootstrap.registry | quote }}
-  repository: {{ .Values.images.opendeskKeycloakBootstrap.repository | quote }}
-  tag: {{ .Values.images.opendeskKeycloakBootstrap.tag | quote }}
+  # cosa fork image: kcom.py reads the secret-resolved /tmp/values.yaml and
+  # provisionValuesYaml.py uses the absolute /app/secrets path, so externalSecrets
+  # client secrets resolve (upstream 1.5.0 sent raw existingSecret blocks to Keycloak
+  # -> HTTP 400 on client create).
+  # Source: https://github.com/cosa-systems/opendesk-keycloak-bootstrap-image
+  registry: "ghcr.io"
+  repository: "cosa-systems/opendesk-keycloak-bootstrap-image"
+  tag: "1.5.0-cosa.1"
   imagePullPolicy: {{ .Values.global.imagePullPolicy | quote }}
 
 cleanup:

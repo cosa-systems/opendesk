@@ -226,11 +226,15 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-migrations"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-migrations"
+    # cosa fork: MIGRATIONS_NAMESPACE defaults to the Job's own pod namespace via the
+    # downward-API fieldRef (instead of the chart's "default" literal), so the pre/post
+    # migration Jobs operate in the deploy namespace without a baked-in value.
+    # Source: https://github.com/cosa-systems/opendesk-migrations/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-migrations"
-    version: "1.8.0"
-    verify: true
+    version: "1.8.0-cosa.1"
+    verify: false
   minio:
     # providerCategory: "Community"
     # providerResponsible: "openDesk"
@@ -308,11 +312,21 @@ charts:
     # upstreamRepository: "nubus/charts/nubus"
     # upstreamMirrorTagFilterRegEx: '^(\d+)\.(\d+)\.(\d+)$'
     # upstreamMirrorStartFrom: ["0", "19", "3"]
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/univention/charts-mirror"
+    # cosa fork rebased on v1.19.1 — repoints the bundled
+    # `stack-data-ums 0.102.4` dep at the cosa fork that carries
+    # the existingSecret knobs + prepare-context initContainer.
+    # Source: https://github.com/cosa-systems/nubus-stack/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "nubus"
-    version: "1.19.1"
-    verify: true
+    # cosa.3 adds nubusStackDataUms.administratorPasswordSecret.create so the
+    # admin password Secret can be suppressed under externalSecrets.
+    # cosa.4 bundles stack-data-ums 0.102.5-cosa.3, whose generalised
+    # contextUsers map lets us provision the OX system user password
+    # (oxSystemUser -> NUBUS_LDAPSEARCH_OX) via the chart's native runtime
+    # merge instead of a post-renderer.
+    version: "1.19.2-cosa.4"
+    verify: false
   opendeskAlerts:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -338,11 +352,16 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-keycloak-bootstrap/opendesk-keycloak-bootstrap"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-keycloak-bootstrap"
+    # cosa fork: preparePossibleExistingSecret walks the values subtree recursively
+    # so nested `secret.existingSecret` refs are mounted (the upstream helper matched
+    # only a direct `existingSecret` key, so the app-client OIDC secrets were never
+    # mounted and the bootstrap FileNotFound-crashed on ./app/secrets/<secret>-<key>).
+    # Source: https://github.com/cosa-systems/opendesk-keycloak-bootstrap/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-keycloak-bootstrap"
-    version: "2.8.0"
-    verify: true
+    version: "2.8.0-cosa.5"
+    verify: false
   opendeskStaticFiles:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -392,21 +411,31 @@ charts:
     # upstreamMirrorStartFrom: ["2", "2", "37"]
     # upstreamRegistry: "https://registry.open-xchange.com"
     # upstreamRepository: "appsuite-public-sector/charts/appsuite-public-sector"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/open-xchange/charts-mirror"
+    # cosa fork: self-contained CE umbrella (vendored from the
+    # opencode.de CE mirror). Bundled core-mw suppresses the
+    # secret-envvars Secret when existingEnvSecret supplies the
+    # credentials; docconv + imageconv gate their checksum/commonEnv
+    # annotation (-cosa.2) so the render is deterministic. Source:
+    # https://github.com/cosa-systems/ox-appsuite-middleware/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "appsuite-public-sector"
-    version: "2.30.57"
+    version: "2.30.58-cosa.2"
     verify: false
   oxAppSuiteBootstrap:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-open-xchange-bootstrap/opendesk-open-xchange-bootstrap"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-open-xchange-bootstrap"
+    # cosa fork: only rollout-restart the OX middleware when a register* step
+    # actually registered something new, so Flux's periodic re-runs of this
+    # bootstrap Job no longer bounce the middleware on every reconcile.
+    # Source: https://github.com/cosa-systems/opendesk-open-xchange-bootstrap/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-open-xchange-bootstrap"
-    version: "4.0.3"
-    verify: true
+    version: "4.0.3-cosa.1"
+    verify: false
   oxConnector:
     # providerCategory: "Supplier"
     # providerResponsible: "Univention"
@@ -420,15 +449,17 @@ charts:
     version: "0.36.4"
     verify: true
   postfix:
-    # providerCategory: "Platform"
-    # providerResponsible: "openDesk"
+    # cosa fork (github.com/cosa-systems/opendesk-postfix @ cosa-deploy ->
+    # ghcr.io/cosa-systems): adds service.external.loadBalancerIP so the
+    # postfix-ox-external LB can be pinned to a reserved IONOS IP. verify:false
+    # because the GHCR packages aren't signed (yet).
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-postfix/postfix"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-postfix"
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "postfix"
-    version: "5.4.1"
-    verify: true
+    version: "5.4.1-cosa.1"
+    verify: false
   postgresql:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -474,20 +505,25 @@ charts:
     # providerResponsible: "Element"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-element/opendesk-synapse"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork carries existingSecret support for every consumed credential.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse"
-    version: "6.1.11"
-    verify: true
+    version: "6.1.12-cosa.2"
+    verify: false
   synapseAdmin:
     # Enterprise Component
     # providerCategory: "Supplier"
     # providerResponsible: "Element"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork carries existingSecret for adminBot/auditBot backup
+    # passphrase + LDAP bind password.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-admin"
-    version: "6.1.11"
-    verify: true
+    version: "6.1.12-cosa.1"
+    verify: false
   synapseAdminbotWeb:
     # Enterprise Component
     # providerCategory: "Supplier"
@@ -502,20 +538,24 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-element/opendesk-synapse-create-account"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork carries existingSecret support for the bot credentials.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-create-account"
-    version: "6.1.11"
-    verify: true
+    version: "6.1.12-cosa.1"
+    verify: false
   synapseGroupsync:
     # Enterprise Component
     # providerCategory: "Supplier"
     # providerResponsible: "Element"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork carries existingSecret via init+sed substitution.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-groupsync"
-    version: "6.1.11"
-    verify: true
+    version: "6.1.12-cosa.1"
+    verify: false
   synapsePipe:
     # Enterprise Component
     # providerCategory: "Supplier"
