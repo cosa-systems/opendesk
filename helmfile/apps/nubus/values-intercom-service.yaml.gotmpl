@@ -44,7 +44,14 @@ global:
 
 ics:
   session:
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      keyMapping:
+        secret: "INTERCOM_SECRET"
+    {{- else }}
     secret: {{ .Values.secrets.intercom.secret | quote }}
+    {{- end }}
   issuerBaseUrl: "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/{{ .Values.platform.realm }}"
   originRegex: "{{ .Values.global.domain }}"
   enableSessionCookie: true
@@ -57,23 +64,54 @@ ics:
     domain: {{ .Values.global.domain | quote }}
   oidc:
     id: "opendesk-intercom"
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      keyMapping:
+        clientSecret: "KEYCLOAK_CLIENTSECRET_INTERCOM"
+    {{- else }}
     clientSecret: {{ .Values.secrets.keycloak.clientSecret.intercom | quote }}
+    {{- end }}
   matrix:
     subdomain: {{ .Values.global.hosts.synapse | quote }}
     serverName: "{{ .Values.global.hosts.synapse }}.{{ .Values.global.domain }}"
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          applicationServiceSecret: "INTERCOM_SYNAPSE_AS_TOKEN"
+      {{- else }}
       applicationServiceSecret: {{ .Values.secrets.intercom.synapseAsToken | quote }}
+      {{- end }}
   nordeck:
     subdomain: {{ .Values.global.hosts.matrixNeoDateFixBot | quote }}
   portal:
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          sharedSecret: "CENTRALNAVIGATION_API_KEY"
+      {{- else }}
       sharedSecret: {{ .Values.secrets.centralnavigation.apiKey | quote }}
+      {{- end }}
   redis:
     host: {{ .Values.cache.intercomService.host | quote }}
     port: {{ .Values.cache.intercomService.port }}
     auth:
       username: {{ .Values.cache.intercomService.username }}
+      {{- if .Values.externalSecrets.enabled }}
+      # Redis password lives in the cluster-side `db-passwords` Secret
+      # (key OPENDESK_REDIS_PASSWORD) next to the per-component DB
+      # passwords, alongside the Valkey HelmRelease it authenticates to.
+      existingSecret:
+        name: "db-passwords"
+        keyMapping:
+          password: "OPENDESK_REDIS_PASSWORD"
+      {{- else }}
       password: {{ .Values.cache.intercomService.password | default .Values.secrets.redis.password | quote }}
+      {{- end }}
     ssl:
       enabled: {{ .Values.cache.intercomService.tls }}
   openxchange:

@@ -45,7 +45,15 @@ collabora:
     {{ .Values.technical.collabora.additionalExtraParams }}
     {{- end }}
   username: "collabora-internal-admin"
+  {{- if .Values.externalSecrets.enabled }}
+  existingSecret:
+    enabled: true
+    secretName: {{ .Values.externalSecrets.name | quote }}
+    usernameKey: "COLLABORA_ADMIN_USERNAME"
+    passwordKey: "COLLABORA_ADMIN_PASSWORD"
+  {{- else }}
   password: {{ .Values.secrets.collabora.adminPassword | quote }}
+  {{- end }}
 
 fullnameOverride: "collabora"
 

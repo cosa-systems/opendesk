@@ -53,7 +53,9 @@ environment:
   # Ref.: https://www.openproject-edge.com/docs/installation-and-operations/configuration/#seeding-ldap-connections
   OPENPROJECT_SEED_LDAP_OPENDESK_HOST: {{ .Values.ldap.host | quote }}
   OPENPROJECT_SEED_LDAP_OPENDESK_PORT: "389"
+  {{- if not .Values.externalSecrets.enabled }}
   OPENPROJECT_SEED_LDAP_OPENDESK_BINDPASSWORD: {{ .Values.secrets.nubus.ldapSearch.openproject | quote }}
+  {{- end }}
   OPENPROJECT_SEED_LDAP_OPENDESK_SECURITY: "plain_ldap"
   OPENPROJECT_SEED_LDAP_OPENDESK_BINDUSER: "uid=ldapsearch_openproject,cn=users,{{ .Values.ldap.baseDn }}"
   OPENPROJECT_SEED_LDAP_OPENDESK_BASEDN: "{{ .Values.ldap.baseDn }}"
@@ -70,13 +72,17 @@ environment:
     "(&(objectClass=opendeskProjectmanagementGroup)(opendeskProjectmanagementEnabled=TRUE))"
   OPENPROJECT_SEED_LDAP_OPENDESK_GROUPFILTER_OPENDESK_SYNC__USERS: "true"
   OPENPROJECT_SEED_LDAP_OPENDESK_GROUPFILTER_OPENDESK_GROUP__ATTRIBUTE: "cn"
+  {{- if not .Values.externalSecrets.enabled }}
   OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_USER: {{ .Values.secrets.openproject.apiAdminUsername | quote }}
   OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_PASSWORD: {{ .Values.secrets.openproject.apiAdminPassword | quote }}
   OPENPROJECT_SOUVAP__NAVIGATION__SECRET: {{ .Values.secrets.centralnavigation.apiKey | quote }}
+  {{- end }}
   OPENPROJECT_SOUVAP__NAVIGATION__URL: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}/univention/portal/navigation.json?base=https%3A//{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}"
   OPENPROJECT_SMTP__DOMAIN: {{ .Values.global.mailDomain | default .Values.global.domain | quote }}
   OPENPROJECT_SMTP__USER__NAME: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
+  {{- if not .Values.externalSecrets.enabled }}
   OPENPROJECT_SMTP__PASSWORD: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
+  {{- end }}
   OPENPROJECT_SMTP__PORT: 587
   OPENPROJECT_SMTP__SSL: "false" # (default=false)
   OPENPROJECT_SMTP__ADDRESS: {{ printf "%s.%s.svc.%s" "postfix" (.Values.apps.postfix.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
@@ -112,6 +118,60 @@ environment:
   SSL_CERT_FILE: "/etc/ssl/certs/ca-certificates.crt"
   {{- end }}
 
+{{- if .Values.externalSecrets.enabled }}
+# Credentials previously baked into `environment:` and the seed-admin
+# password + OIDC client secret come from the cluster-side Secret here
+# instead. The chart concatenates `extraEnvVars` with the `environment:`
+# map into the pod's env block, so secretKeyRef wins for the duplicated
+# names.
+extraEnvVars:
+  - name: "OPENPROJECT_SEED_LDAP_OPENDESK_BINDPASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_OPENPROJECT"
+  - name: "OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_USER"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "OPENPROJECT_API_ADMIN_USERNAME"
+  - name: "OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_PASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "OPENPROJECT_API_ADMIN_PASSWORD"
+  - name: "OPENPROJECT_SOUVAP__NAVIGATION__SECRET"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "CENTRALNAVIGATION_API_KEY"
+  - name: "OPENPROJECT_SMTP__PASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+  - name: "OPENPROJECT_SEED_ADMIN_USER_PASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "OPENPROJECT_ADMIN_PASSWORD"
+  - name: "OPENPROJECT_OPENID__CONNECT_KEYCLOAK_SECRET"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "KEYCLOAK_CLIENTSECRET_OPENPROJECT"
+  - name: "OPENPROJECT_FOG_CREDENTIALS_AWS__ACCESS__KEY__ID"
+    valueFrom:
+      secretKeyRef:
+        name: "opendesk-s3-credentials"
+        key: "access-key-id"
+  - name: "OPENPROJECT_FOG_CREDENTIALS_AWS__SECRET__ACCESS__KEY"
+    valueFrom:
+      secretKeyRef:
+        name: "opendesk-s3-credentials"
+        key: "secret-access-key"
+{{- end }}
+
 {{- if .Values.certificate.selfSigned }}
 extraVolumes:
   - name: "trusted-cert-secret-volume"
@@ -132,8 +192,16 @@ hocuspocus:
     path: /hocuspocus
     pathType: "Prefix"
   auth:
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart-native: when existingSecret is set, secret_hocuspocus.yaml skips
+    # emitting its random `hocuspocus-secret-auto-generated` Secret (which
+    # otherwise regenerates on every offline render and lands in git).
+    existingSecret: {{ .Values.externalSecrets.name | quote }}
+    secretKey: "OPENPROJECT_HOCUSPOCUS_SECRET"
+    {{- else }}
     existingSecret:
     secretKey: secret
+    {{- end }}
   networkPolicy:
     enabled: false
   image:
@@ -179,7 +247,13 @@ podAnnotations:
 postgresql:
   bundled: false
   auth:
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret: {{ .Values.externalSecrets.dbSecretName | quote }}
+    secretKeys:
+      userPasswordKey: "PG_OPENPROJECT"
+    {{- else }}
     password: {{ .Values.databases.openproject.password | default .Values.secrets.postgresql.openprojectUser | quote }}
+    {{- end }}
     username: {{ .Values.databases.openproject.username | quote }}
     database: {{ .Values.databases.openproject.name | quote }}
   connection:
@@ -195,6 +269,15 @@ probes:
     failureThreshold: 30
 
 openproject:
+  {{- if .Values.externalSecrets.enabled }}
+  # Chart-native: when secretKeyBase.existingSecret is set,
+  # secret_secret_key_base.yaml skips emitting its random
+  # `secret-key-base-auto-generated` Secret (which otherwise regenerates on
+  # every offline render and lands in git).
+  secretKeyBase:
+    existingSecret: {{ .Values.externalSecrets.name | quote }}
+    secretKey: "OPENPROJECT_SECRET_KEY_BASE"
+  {{- end }}
   # seed will only be executed on initial installation
   seed_locale: "de"
   host: "{{ .Values.global.hosts.openproject }}.{{ .Values.global.domain }}"
@@ -203,7 +286,9 @@ openproject:
     name: "OpenProject Internal Admin"
     mail: "openproject-admin@swp-domain.internal"
     password_reset: "false"
+    {{- if not .Values.externalSecrets.enabled }}
     password: {{ .Values.secrets.openproject.adminPassword | quote }}
+    {{- end }}
     # Lock the admin user, preventing internal logins.
     # Switch to true once the NC filestore bootstrapping is optimized.
     locked: false
@@ -215,7 +300,9 @@ openproject:
     identifier: "opendesk-openproject"
     provider: "keycloak"
     scope: "[openid,opendesk-openproject-scope]"
+    {{- if not .Values.externalSecrets.enabled }}
     secret: {{ .Values.secrets.keycloak.clientSecret.openproject | quote }}
+    {{- end }}
     tokenEndpoint: "/realms/{{ .Values.platform.realm }}/protocol/openid-connect/token"
     userinfoEndpoint: "/realms/{{ .Values.platform.realm }}/protocol/openid-connect/userinfo"
     attribute_map:
@@ -280,6 +367,9 @@ s3:
     accessKeyId: {{ .Values.objectstores.openproject.username | quote }}
     {{- if .Values.objectstores.openproject.secretKey }}
     secretAccessKey: {{ .Values.objectstores.openproject.secretKey | quote }}
+    {{- else if .Values.externalSecrets.enabled }}
+    # S3 access-key + secret-access-key are injected via `extraEnvVars`
+    # against the cluster-side `opendesk-s3-credentials` Secret.
     {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
     secretAccessKey: {{ .Values.secrets.minio.openprojectUser | quote }}
     {{- else }}

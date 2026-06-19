@@ -24,11 +24,23 @@ dovecot:
   mailDomains: {{ toYaml (prepend .Values.global.additionalMailDomains (.Values.global.mailDomain | default .Values.global.domain) | uniq) | nindent 4 }}
   defaultMailDomain: {{ .Values.global.mailDomain | default .Values.global.domain | quote }}
   password:
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "DOVECOT_DOVEADM"
+    {{- else }}
     value: {{ .Values.secrets.dovecot.doveadm | quote }}
+    {{- end }}
   migration:
     enabled: {{ .Values.functional.migration.oxAppSuite.enabled }}
     masterPassword:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "OXAPPSUITE_MIGRATIONS_MASTER_PASSWORD"
+      {{- else }}
       value: {{ .Values.secrets.oxAppSuite.migrationsMasterPassword | quote }}
+      {{- end }}
   ldap:
     enabled: true
     host: {{ .Values.ldap.host | quote }}
@@ -36,14 +48,26 @@ dovecot:
     base: "{{ .Values.ldap.baseDn }}"
     dn: "uid=ldapsearch_dovecot,cn=users,{{ .Values.ldap.baseDn }}"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_DOVECOT"
+      {{- else }}
       value: {{ .Values.secrets.nubus.ldapSearch.dovecot | quote }}
+      {{- end }}
   loginTrustedNetworks: {{ join " " .Values.cluster.networking.cidr | quote }}
   oidc:
     enabled: true
     clientID:
       value: "opendesk-dovecot"
     clientSecret:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "KEYCLOAK_CLIENTSECRET_DOVECOT"
+      {{- else }}
       value: {{ .Values.secrets.keycloak.clientSecret.dovecot | quote }}
+      {{- end }}
     introspectionHost: {{ printf "%s.%s" .Values.global.hosts.keycloak .Values.global.domain | quote }}
     introspectionPath: "/realms/{{ .Values.platform.realm }}/protocol/openid-connect/token/introspect"
     usernameAttribute: "opendesk_username"
