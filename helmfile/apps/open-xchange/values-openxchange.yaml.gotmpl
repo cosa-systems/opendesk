@@ -938,6 +938,16 @@ appsuite:
       com.openexchange.capability.guard-mail: {{ .Values.functional.groupware.mail.encryption.enabled | quote }}
       com.openexchange.capability.smime: {{ .Values.functional.groupware.mail.encryption.enabled | quote }}
       com.openexchange.capability.document_preview: "true"
+      # cosa: advertise the scheduled-mail ("Send later") capability to the UI.
+      # The backend feature is enabled via scheduledmail.properties
+      # (com.openexchange.mail.scheduled.enabled=true) and the bundle is active.
+      # The App Suite composer draws the "Send later" button only when
+      # hasFeature('scheduleSend') is true, and core-ui defines that as
+      # `capabilities.has('scheduled_mail')` (UNDERSCORE) — NOT `scheduledmail`.
+      # So the capability name must be scheduled_mail; grant it explicitly since
+      # OpenDesk's permission set doesn't include it (verified against the
+      # core-ui:8.48.7 source: io.ox/mail/compose/schedule/view.js).
+      com.openexchange.capability.scheduled_mail: {{ .Values.functional.groupware.mail.scheduledSend.enabled | quote }}
       # Mail Categories
       com.openexchange.mail.categories: {{ .Values.functional.groupware.mail.categories.enabled | quote }}
       {{ if .Values.functional.groupware.mail.categories.enabled }}
@@ -1116,6 +1126,25 @@ appsuite:
         com.openexchange.noreply.password: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
     {{- end }}
     propertiesFiles:
+      # cosa: enable OX "Send later" / scheduled mail (open-xchange-mail-scheduled).
+      # The scheduled_mail capability is declared by the stock
+      # com.openexchange.mail.scheduled.impl bundle, gated by its
+      # CapabilityChecker -> ScheduledMailServiceImpl.isAvailable(), which (with
+      # OAuth token exchange off) requires EITHER passwordSource=global OR
+      # requireMasterAuth=false. OpenDesk uses passwordSource=session and
+      # requireMasterAuth defaults true, so availability is denied and the
+      # capability never surfaces. Two properties are therefore needed:
+      #   .enabled          (default false) -> turn the feature on
+      #   .requireMasterAuth (default true) -> false, since we have no master/
+      #                       global mail auth (deferred sends use the session-
+      #                       persisted credential, not a server master password).
+      # configcascade-aware + reloadable; scheduled mails are stored in the OX DB.
+      # Defaults otherwise: 1000/user, 100/hour, 30-min check frequency.
+      /opt/open-xchange/etc/scheduledmail.properties:
+        com.openexchange.mail.scheduled.enabled: {{ .Values.functional.groupware.mail.scheduledSend.enabled | quote }}
+        # Always false for OpenDesk (passwordSource=session, no master/global mail
+        # auth); only consulted when .enabled is true.
+        com.openexchange.mail.scheduled.requireMasterAuth: "false"
       /opt/open-xchange/etc/Group.properties:
         CHECK_GROUP_UID_FOR_NOT_ALLOWED_CHARS: "false"
       /opt/open-xchange/etc/server.properties:
@@ -1172,6 +1201,15 @@ appsuite:
       # Show the Enterprise Picker in the top right corner instead of the launcher drop-down
       io.ox/core//features/enterprisePicker/showLauncher: "false"
       io.ox/core//features/enterprisePicker/showTopRightLauncher: "true"
+      # cosa: enable the "Send later" (scheduled mail) composer button. core-ui's
+      # hasFeature('scheduleSend') short-circuits to false unless this toggle is
+      # on, BEFORE checking the capability — so the scheduled_mail capability +
+      # backend feature alone never surface the button. The toggle defaults off
+      # and OpenDesk doesn't set it. With it on, core-ui evaluates
+      # scheduleSend := capabilities.has('scheduled_mail') (granted above) and the
+      # composer Send-button dropdown gains "Send later". (Verified against
+      # core-ui:8.48.7 assets/manifests-*.js hasFeature + io.ox/mail/compose/schedule.)
+      io.ox/core//features/scheduleSend: {{ .Values.functional.groupware.mail.scheduledSend.enabled | quote }}
       # Text and icon color in the topbar
       io.ox/dynamic-theme//logoWidth: "82"
       io.ox/dynamic-theme//topbarHover: "rgba(0, 0, 0, 0.1)"
