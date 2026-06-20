@@ -111,8 +111,10 @@ configuration:
       {{- /* Extra, deployment-defined application services (e.g. an
              alerting bot). Each entry is a full appservice registration
              dict and may carry a tokenExistingSecret block like the
-             entries above. */}}
-      {{- range .Values.functional.chat.matrix.extraAppServices | default list }}
+             entries above. `dig` keeps this safe under helmfile's
+             missingkey=error: releases that render this shared values file
+             without the key (e.g. synapse-web) get an empty list. */}}
+      {{- range dig "functional" "chat" "matrix" "extraAppServices" (list) .Values }}
       -
 {{ toYaml . | indent 8 }}
       {{- end }}
