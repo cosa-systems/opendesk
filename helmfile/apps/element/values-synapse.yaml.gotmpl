@@ -108,6 +108,14 @@ configuration:
               regex: "@.*"
         url: null
         sender_localpart: ox-appsuite
+      {{- /* Extra, deployment-defined application services (e.g. an
+             alerting bot). Each entry is a full appservice registration
+             dict and may carry a tokenExistingSecret block like the
+             entries above. */}}
+      {{- range .Values.functional.chat.matrix.extraAppServices | default list }}
+      -
+{{ toYaml . | indent 8 }}
+      {{- end }}
     {{- if eq (env "OPENDESK_ENTERPRISE") "true" }}
       {{- if .Values.apps.elementAdmin.enabled }}
       - id: "element-adminbot-pipe"
