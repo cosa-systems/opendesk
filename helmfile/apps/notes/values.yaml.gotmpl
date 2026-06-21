@@ -4,9 +4,9 @@
 global:
   collaborationServerSecret:
     {{- if .Values.externalSecrets.enabled }}
-    valueFromSecret:
-      secretName: {{ .Values.externalSecrets.name | quote }}
-      secretKey: "NOTES_COLLABORATION_SECRET"
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "NOTES_COLLABORATION_SECRET"
     {{- else }}
     value: {{ .Values.secrets.notes.collaborationSecret | quote }}
     {{- end }}
@@ -16,9 +16,9 @@ global:
   tlsSecretName: {{ .Values.ingress.tls.secretName | quote }}
   yProviderApiKey:
     {{- if .Values.externalSecrets.enabled }}
-    valueFromSecret:
-      secretName: {{ .Values.externalSecrets.name | quote }}
-      secretKey: "NOTES_COLLABORATION_SECRET"
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "NOTES_COLLABORATION_SECRET"
     {{- else }}
     value: {{ .Values.secrets.notes.collaborationSecret | quote }}
     {{- end }}
@@ -40,9 +40,9 @@ global:
       {{- if .Values.objectstores.notes.secretKey }}
       value: {{ .Values.objectstores.notes.secretKey | quote }}
       {{- else if .Values.externalSecrets.enabled }}
-      valueFromSecret:
-        secretName: "opendesk-s3-credentials"
-        secretKey: "secret-access-key"
+      existingSecret:
+        name: "opendesk-s3-credentials"
+        key: "secret-access-key"
       {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
       value: {{ .Values.secrets.minio.notesUser | quote }}
       {{- else }}
@@ -87,9 +87,9 @@ backend:
       name: {{ .Values.databases.notes.name | quote }}
       password:
         {{- if .Values.externalSecrets.enabled }}
-        valueFromSecret:
-          secretName: {{ .Values.externalSecrets.dbSecretName | quote }}
-          secretKey: "PG_NOTES"
+        existingSecret:
+          name: {{ .Values.externalSecrets.dbSecretName | quote }}
+          key: "PG_NOTES"
         {{- else }}
         value: {{ .Values.databases.notes.password | default .Values.secrets.postgresql.notesUser | quote }}
         {{- end }}
@@ -106,9 +106,9 @@ backend:
         value: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
       password:
         {{- if .Values.externalSecrets.enabled }}
-        valueFromSecret:
-          secretName: {{ .Values.externalSecrets.name | quote }}
-          secretKey: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
         {{- else }}
         value: {{ .Values.secrets.postfix.opendeskSystemPassword | quote }}
         {{- end }}
@@ -118,9 +118,9 @@ backend:
         value: "opendesk-notes"
       rpClientSecret:
         {{- if .Values.externalSecrets.enabled }}
-        valueFromSecret:
-          secretName: {{ .Values.externalSecrets.name | quote }}
-          secretKey: "KEYCLOAK_CLIENTSECRET_NOTES"
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "KEYCLOAK_CLIENTSECRET_NOTES"
         {{- else }}
         value: {{ .Values.secrets.keycloak.clientSecret.notes | quote }}
         {{- end }}
@@ -140,9 +140,9 @@ backend:
     django:
       secretKey:
         {{- if .Values.externalSecrets.enabled }}
-        valueFromSecret:
-          secretName: {{ .Values.externalSecrets.name | quote }}
-          secretKey: "NOTES_DJANGO_SECRET_KEY"
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "NOTES_DJANGO_SECRET_KEY"
         {{- else }}
         value: {{ .Values.secrets.notes.djangoSecretKey }}
         {{- end }}
@@ -151,18 +151,18 @@ backend:
         value: {{ printf "default.admin@%s" .Values.global.domain | quote }}
       superuserPassword:
         {{- if .Values.externalSecrets.enabled }}
-        valueFromSecret:
-          secretName: {{ .Values.externalSecrets.name | quote }}
-          secretKey: "NOTES_SUPERUSER_PASSWORD"
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "NOTES_SUPERUSER_PASSWORD"
         {{- else }}
         value: {{ .Values.secrets.notes.superuser }}
         {{- end }}
     frontendTheme: "openDesk"
     redisUrl:
       {{- if .Values.externalSecrets.enabled }}
-      valueFromSecret:
-        secretName: {{ .Values.externalSecrets.name | quote }}
-        secretKey: "NOTES_REDIS_URL"
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NOTES_REDIS_URL"
       {{- else }}
       value: "redis://default:{{ .Values.cache.notes.password | default .Values.secrets.redis.password }}@{{ .Values.cache.notes.host }}:{{ .Values.cache.notes.port }}/7"
       {{- end }}
