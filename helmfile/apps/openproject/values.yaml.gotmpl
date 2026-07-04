@@ -21,7 +21,7 @@ containerSecurityContext:
       - "ALL"
   seccompProfile:
     type: "RuntimeDefault"
-  readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: {{ .Values.technical.openproject.readOnlyRootFilesystem }}
   runAsNonRoot: true
   seLinuxOptions:
     {{ .Values.seLinuxOptions.openproject | toYaml | nindent 4 }}
@@ -251,7 +251,11 @@ openproject:
     attribute_map:
       login: "opendesk_username"
       admin: "openproject_admin"
-  useTmpVolumes: true
+  # Tie tmp-volume usage to the root-FS mode, exactly as the chart's own
+  # default does: a read-only root FS needs RWO PVCs for /tmp + /app/tmp
+  # (the chart can't use emptyDir there, k8s#110835); a writable root FS
+  # writes /tmp on the container's own layer and needs no PVCs.
+  useTmpVolumes: {{ .Values.technical.openproject.readOnlyRootFilesystem }}
   tmpVolumesStorage: {{ .Values.persistence.storages.openprojectTmp.size | quote }}
   tmpVolumesStorageClassName: {{ coalesce .Values.persistence.storages.openprojectTmp.storageClassName .Values.persistence.storageClassNames.RWO | quote }}
   tmpVolumesAnnotations:
