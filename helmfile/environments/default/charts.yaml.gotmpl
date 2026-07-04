@@ -449,17 +449,15 @@ charts:
     version: "0.36.4"
     verify: true
   postfix:
-    # cosa fork (github.com/cosa-systems/opendesk-postfix @ cosa-deploy ->
-    # ghcr.io/cosa-systems): adds service.external.loadBalancerIP so the
-    # postfix-ox-external LB can be pinned to a reserved IONOS IP. verify:false
-    # because the GHCR packages aren't signed (yet).
+    # providerCategory: "Platform"
+    # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-postfix/postfix"
-    registry: "ghcr.io"
-    repository: "cosa-systems"
+    registry: "registry.opencode.de"
+    repository: "bmi/opendesk/components/platform-development/charts/opendesk-postfix"
     name: "postfix"
-    version: "5.4.1-cosa.1"
-    verify: false
+    version: "5.5.0"
+    verify: true
   postgresql:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
