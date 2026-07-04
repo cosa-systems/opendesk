@@ -148,6 +148,14 @@ technical:
     # rejected ("has no public ip addresses"). Set this to the ingress IP/range
     # to permit it. `~` leaves the default SSRF protection unchanged.
     ssrfIpAllowlist: ~
+    # Run OpenProject with a read-only root filesystem. When true (default), the
+    # chart backs /tmp + /app/tmp with dynamically-provisioned RWO PVCs (it can't
+    # use emptyDir under a read-only FS due to the tmpdir sticky-bit issue,
+    # k8s#110835). Set false to run with a writable root filesystem and NO tmp
+    # PVCs — the app writes /tmp on its own ephemeral container layer, so pod
+    # startup no longer gates on volume provisioning. Useful where the storage
+    # backend's dynamic provisioning is slow/unreliable.
+    readOnlyRootFilesystem: true
 
   # Postfix related technical settings
   postfix:
