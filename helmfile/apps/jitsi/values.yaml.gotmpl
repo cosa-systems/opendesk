@@ -152,7 +152,14 @@ jitsi:
       TURN_HOST: {{ .Values.turn.server.host | quote }}
       TURN_PORT: {{ .Values.turn.server.port | quote }}
       TURN_TRANSPORT: {{ .Values.turn.transport | quote }}
+      {{- if not .Values.externalSecrets.enabled }}
       TURN_CREDENTIALS: {{ .Values.turn.credentials | quote }}
+      {{- else }}
+      # In externalSecrets mode TURN_CREDENTIALS is NOT baked into the prosody
+      # ConfigMap (which would leak the shared HMAC secret into rendered git).
+      # It is injected as an env var from the existingSecret that prosody
+      # already envFroms, keeping it cluster-side alongside coturn's copy.
+      {{- end }}
     resources:
       {{ .Values.resources.prosody | toYaml | nindent 6 }}
     securityContext:
