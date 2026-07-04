@@ -40,6 +40,13 @@ environment:
   OPENPROJECT_SEED__ENTERPRISE__TOKEN: {{ .Values.enterpriseKeys.openproject.token | quote }}
   {{- end }}
 # Ref. https://www.openproject.org/docs/installation-and-operations/configuration/environment/
+  {{- with .Values.technical.openproject.ssrfIpAllowlist }}
+  # Permit specific otherwise-blocked IPs/ranges through OpenProject's outbound
+  # SSRF filter. Needed when OpenProject fetches an asset via its own public
+  # hostname (e.g. the design-logo seed) that in-cluster DNS resolves to a
+  # private/CGNAT ingress IP the ssrf_filter gem blocks by default.
+  OPENPROJECT_SSRF_PROTECTION_IP_ALLOWLIST: {{ . | quote }}
+  {{- end }}
   OPENPROJECT_APP__TITLE: "Projekte - {{ .Values.theme.texts.productName }}"
   OPENPROJECT_LOG__LEVEL: {{ if .Values.debug.enabled }}"debug"{{ else }}"info"{{ end }}
   OPENPROJECT_LOGIN__REQUIRED: "true"

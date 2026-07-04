@@ -157,6 +157,18 @@ technical:
         # Setting this to `null`/`~` resets this value to its respective default value (see reference).
         # Ref.: https://documentation.open-xchange.com/components/middleware/config/8/#mode=search&term=com.openexchange.servlet.maxRate
         maxRate: ~
+  # OpenProject related technical settings
+  openproject:
+    # Comma/space-separated list of IPs/CIDRs to permit through OpenProject's
+    # outbound SSRF filter (OPENPROJECT_SSRF_PROTECTION_IP_ALLOWLIST). The
+    # ssrf_filter gem blocks private/reserved ranges — including 100.64.0.0/10
+    # (CGNAT "shared address space"), which managed-Kubernetes ingress
+    # LoadBalancers are commonly assigned. When OpenProject fetches an asset via
+    # its own public hostname (e.g. the design-logo seed), in-cluster DNS
+    # resolves that host to the ingress IP in such a range and the fetch is
+    # rejected ("has no public ip addresses"). Set this to the ingress IP/range
+    # to permit it. `~` leaves the default SSRF protection unchanged.
+    ssrfIpAllowlist: ~
 
   # Postfix related technical settings
   postfix:
