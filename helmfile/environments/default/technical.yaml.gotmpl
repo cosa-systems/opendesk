@@ -177,6 +177,14 @@ technical:
     # startup no longer gates on volume provisioning. Useful where the storage
     # backend's dynamic provisioning is slow/unreliable.
     readOnlyRootFilesystem: true
+    # Seed the OpenProject design assets (logo, favicon, touch icon, PDF export
+    # images) by downloading them from the deployment's own public openproject
+    # hostname. The download runs through OpenProject's ssrf_filter, which
+    # rejects private/CGNAT addresses — if in-cluster DNS resolves the public
+    # hostname to such an address (e.g. split-horizon to the ingress ClusterIP),
+    # the seeder Job fails permanently. Set false to skip these uploads (design
+    # COLORS are still seeded; OpenProject falls back to its default logo).
+    seedRemoteDesignAssets: true
 
   # Postfix related technical settings
   postfix:
