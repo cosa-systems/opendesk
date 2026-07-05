@@ -110,6 +110,15 @@ environment:
   OPENPROJECT_SEED_DESIGN_MAIN__MENU__BG__COLOR: {{ .Values.theme.colors.white | quote }}
   OPENPROJECT_SEED_DESIGN_MAIN__MENU__BG__SELECTED__BACKGROUND: {{ .Values.theme.colors.primary | quote }}
   OPENPROJECT_SEED_DESIGN_MAIN__MENU__BG__HOVER__BACKGROUND: {{ .Values.theme.colors.secondaryGreyLight | quote }}
+  {{- if .Values.technical.openproject.seedRemoteDesignAssets }}
+  # These design assets are seeded by URL: the seeder pod downloads them from
+  # the deployment's own public openproject hostname. That download can be
+  # impossible in some environments — OpenProject's remote-URL fetch runs
+  # through the ssrf_filter gem, which rejects private/CGNAT addresses, so if
+  # in-cluster DNS resolves the public hostname to such an address (e.g. a
+  # split-horizon answer pointing at the ingress ClusterIP) the seed job
+  # fails. Disable via technical.openproject.seedRemoteDesignAssets; the
+  # seeder then skips the uploads gracefully (colors above still apply).
   OPENPROJECT_SEED_DESIGN_LOGO: "https://{{ .Values.global.hosts.openproject }}.{{ .Values.global.domain }}/opendesk-static-files/logo.svg"
   OPENPROJECT_SEED_DESIGN_LOGO__MOBILE: "https://{{ .Values.global.hosts.openproject }}.{{ .Values.global.domain }}/opendesk-static-files/logomobile.svg"
   OPENPROJECT_SEED_DESIGN_FAVICON: "https://{{ .Values.global.hosts.openproject }}.{{ .Values.global.domain }}/opendesk-static-files/favicon.svg"
@@ -128,6 +137,7 @@ environment:
   {{- end }}
   {{- if .Values.theme.imagery.projects.pdfExportFontBoldItalicUrl }}
   OPENPROJECT_SEED_DESIGN_EXPORT__FONT__BOLD__ITALIC: {{ .Values.theme.imagery.projects.pdfExportFontBoldItalicUrl | quote }}
+  {{- end }}
   {{- end }}
 
   {{- if .Values.certificate.selfSigned }}
