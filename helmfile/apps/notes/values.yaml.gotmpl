@@ -44,6 +44,15 @@ global:
       {{- end }}
 
 backend:
+  # The chart's per-component PDB defaults to minAvailable: 1 while every
+  # component runs a single replica, so allowed disruptions are permanently 0
+  # and the eviction API refuses every drain of the hosting node — stalling
+  # managed-platform node maintenance indefinitely. Null minAvailable so the
+  # chart's template falls back to maxUnavailable: 1: the PDB object remains,
+  # but the single replica is evictable and reschedules on drains.
+  pdb:
+    minAvailable: null
+    maxUnavailable: 1
   image:
     registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.notesBackend.registry | quote }}
     repository: {{ .Values.images.notesBackend.repository | quote }}
@@ -216,6 +225,15 @@ backend:
   {{- end }}
 
 frontend:
+  # The chart's per-component PDB defaults to minAvailable: 1 while every
+  # component runs a single replica, so allowed disruptions are permanently 0
+  # and the eviction API refuses every drain of the hosting node — stalling
+  # managed-platform node maintenance indefinitely. Null minAvailable so the
+  # chart's template falls back to maxUnavailable: 1: the PDB object remains,
+  # but the single replica is evictable and reschedules on drains.
+  pdb:
+    minAvailable: null
+    maxUnavailable: 1
   image:
     registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.notesFrontend.registry | quote }}
     repository: {{ .Values.images.notesFrontend.repository | quote }}
@@ -265,6 +283,15 @@ frontend:
       subPath: "runtime-env.js"
 
 y-provider:
+  # The chart's per-component PDB defaults to minAvailable: 1 while every
+  # component runs a single replica, so allowed disruptions are permanently 0
+  # and the eviction API refuses every drain of the hosting node — stalling
+  # managed-platform node maintenance indefinitely. Null minAvailable so the
+  # chart's template falls back to maxUnavailable: 1: the PDB object remains,
+  # but the single replica is evictable and reschedules on drains.
+  pdb:
+    minAvailable: null
+    maxUnavailable: 1
   image:
     registry: {{ coalesce .Values.repositories.image.dockerHub .Values.global.imageRegistry .Values.images.notesYProvider.registry | quote }}
     repository: {{ .Values.images.notesYProvider.repository | quote }}
