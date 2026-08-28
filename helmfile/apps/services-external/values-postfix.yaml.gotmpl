@@ -124,6 +124,11 @@ postfix:
         value: {{ .Values.smtp.username }}
       password:
         value: {{ .Values.smtp.password.value }}
+        {{- if .Values.smtp.password.secret.name }}
+        existingSecret:
+          name: {{ .Values.smtp.password.secret.name | quote }}
+          key: {{ required "smtp.password.secret.key must be set when .name is set" .Values.smtp.password.secret.key | quote }}
+        {{- end }}
   smtpSASLAuthEnable: "yes"
   {{- else }}
   smtpSASLAuthEnable: "no"

@@ -5,11 +5,16 @@ smtp:
   host: ""
   port: 587
   username: ""
-  # Value-only: credentials for an external SMTP relay, seeded from the SMTP_PASSWORD environment
-  # variable. Takes `value` only and not the `create`/`name`/`key` structure - the Postfix charts
-  # inline the literal value into their own configuration.
+  # Password for an external SMTP relay, seeded from the SMTP_PASSWORD environment variable.
+  # The Postfix charts (`postfix.relayHost.authentication.password.existingSecret`) support
+  # sourcing this from an existing Secret, with higher precedence than the plain `value` -
+  # mirroring the `dkim.key` convention below. `username` stays a plain value (not sensitive
+  # enough to warrant a schema change here).
   password:
     value: {{ env "SMTP_PASSWORD" | quote }}
+    secret:
+      name: ""
+      key: ""
   localpartNoReply: "no-reply"
   spamMilter:
     host: ""
