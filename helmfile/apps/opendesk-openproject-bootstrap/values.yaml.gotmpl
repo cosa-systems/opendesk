@@ -25,17 +25,41 @@ config:
     admin:
       username:
         value: {{ .Values.secrets.openproject.apiAdminUsername.value | quote }}
+        {{- if .Values.secrets.openproject.apiAdminUsername.name }}
+        secret:
+          name: {{ .Values.secrets.openproject.apiAdminUsername.name | quote }}
+          key: {{ required "secrets.openproject.apiAdminUsername.key must be set when .name is set" .Values.secrets.openproject.apiAdminUsername.key | quote }}
+        {{- end }}
       password:
         value: {{ .Values.secrets.openproject.apiAdminPassword.value | quote }}
+        {{- if .Values.secrets.openproject.apiAdminPassword.name }}
+        secret:
+          name: {{ .Values.secrets.openproject.apiAdminPassword.name | quote }}
+          key: {{ required "secrets.openproject.apiAdminPassword.key must be set when .name is set" .Values.secrets.openproject.apiAdminPassword.key | quote }}
+        {{- end }}
   nextcloud:
     admin:
       username:
         value: "nextcloud"
       password:
         value: {{ .Values.secrets.nextcloud.adminPassword.value | quote }}
+        # Only point at the shared Secret once the operator has explicitly opted out of the
+        # managed default (`create: false`) for it - i.e. genuine bring-your-own. Otherwise this
+        # job keeps reading the literal value exactly as before, so the default behavior for the
+        # vast majority of deployments (create: true) does not change.
+        {{- if not .Values.secrets.nextcloud.adminPassword.create }}
+        secret:
+          name: {{ required "secrets.nextcloud.adminPassword.name must be set when create is false" .Values.secrets.nextcloud.adminPassword.name | quote }}
+          key: {{ required "secrets.nextcloud.adminPassword.key must be set when create is false" .Values.secrets.nextcloud.adminPassword.key | quote }}
+        {{- end }}
     status:
       password:
         value: {{ .Values.secrets.nextcloud.statusPassword.value | quote }}
+        {{- if not .Values.secrets.nextcloud.statusPassword.create }}
+        secret:
+          name: {{ required "secrets.nextcloud.statusPassword.name must be set when create is false" .Values.secrets.nextcloud.statusPassword.name | quote }}
+          key: {{ required "secrets.nextcloud.statusPassword.key must be set when create is false" .Values.secrets.nextcloud.statusPassword.key | quote }}
+        {{- end }}
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
