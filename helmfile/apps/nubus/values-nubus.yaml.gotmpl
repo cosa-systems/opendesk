@@ -16,12 +16,6 @@ global:
   ldap:
     baseDn: {{ .Values.ldap.baseDn | quote }}
     domainName: {{ .Values.global.domain | quote }}
-    # LDAP cn=admin password. This umbrella-global is the source for the shared
-    # "ums-ldap-server-admin" Secret that the UMS provisioning/UDM/UMC components read by name;
-    # it is not (yet) externalizable via existingSecret without re-pointing every consumer.
-    auth:
-      cnAdmin:
-        password: {{ .Values.secrets.nubus.ldapSecret.value | quote }}
   nubusDeployment: true
   secrets:
     masterPassword: {{ .Values.secrets.nubus.masterpassword.value | quote }}
