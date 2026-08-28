@@ -16,6 +16,18 @@ global:
   ldap:
     baseDn: {{ .Values.ldap.baseDn | quote }}
     domainName: {{ .Values.global.domain | quote }}
+    {{- if .Values.secrets.nubus.ldapSecret.name }}
+    # Bring-your-own LDAP admin Secret: this must stay in sync with
+    # nubusLdapServer.ldapServer.auth.existingSecret below so every LDAP-consuming component
+    # (keycloak, provisioning, UMC, ...) - which finds the Secret through this global default -
+    # resolves to the same Secret the ldap-server subchart is told to use.
+    auth:
+      admin:
+        existingSecret:
+          name: {{ .Values.secrets.nubus.ldapSecret.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.ldapSecret.key must be set when .name is set" .Values.secrets.nubus.ldapSecret.key | quote }}
+    {{- end }}
   nubusDeployment: true
   secrets:
     masterPassword: {{ .Values.secrets.nubus.masterpassword.value | quote }}
@@ -590,6 +602,12 @@ nubusPortalConsumer:
     auth:
       username: "portal-consumer"
       password: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.value | quote }}
+      {{- if .Values.secrets.nubus.portalConsumer.provisioningApiPassword.name }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.name | quote }}
+        keyMapping:
+          password: {{ required "secrets.nubus.portalConsumer.provisioningApiPassword.key must be set when .name is set" .Values.secrets.nubus.portalConsumer.provisioningApiPassword.key | quote }}
+      {{- end }}
   replicaCount: {{ .Values.replicas.umsPortalConsumer }}
   resources:
     {{ .Values.resources.umsPortalConsumer | toYaml | nindent 4 }}
@@ -938,10 +956,18 @@ nubusLdapServer:
       repository: {{ .Values.images.nubusLdapServer.repository }}
       tag: {{ .Values.images.nubusLdapServer.tag }}
     auth:
-      # Inline (not existingSecret): the ldap-server subchart materialises the shared
-      # "ums-ldap-server-admin" Secret from this password, which the UMS components consume by
-      # name. Providing an existingSecret here stops that Secret from being created and breaks them.
+      # By default the ldap-server subchart materialises the shared "ums-ldap-server-admin"
+      # Secret from this password, which the UMS components consume by name via the chart's own
+      # default for global.ldap.auth.admin.existingSecret. `existingSecret` (below) takes
+      # precedence over this value once set, so it is always safe to pass both.
       password: {{ .Values.secrets.nubus.ldapSecret.value | quote }}
+      {{- if .Values.secrets.nubus.ldapSecret.name }}
+      # Bring-your-own: must stay in sync with global.ldap.auth.admin.existingSecret above.
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSecret.name | quote }}
+        keyMapping:
+          password: {{ required "secrets.nubus.ldapSecret.key must be set when .name is set" .Values.secrets.nubus.ldapSecret.key | quote }}
+      {{- end }}
     leaderElector:
       image:
         registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusLdapServerLeaderElector.registry | quote }}
@@ -999,17 +1025,41 @@ nubusProvisioning:
     auth:
       admin:
         password: {{ .Values.secrets.nubus.provisioning.api.adminPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.api.adminPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.adminPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.api.adminPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.api.adminPassword.key | quote }}
+        {{- end }}
       prefill:
-        password: {{ .Values.secrets.nubus.provisioning.api.prefillPassword.value | quote}}
+        password: {{ .Values.secrets.nubus.provisioning.api.prefillPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.api.prefillPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.prefillPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.api.prefillPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.api.prefillPassword.key | quote }}
+        {{- end }}
       eventsUdm:
-        password: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword.value | quote}}
+        password: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.api.udmTransformerPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.api.udmTransformerPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.api.udmTransformerPassword.key | quote }}
+        {{- end }}
     image:
       registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusProvisioningApi.registry | quote }}
       repository: {{ .Values.images.nubusProvisioningApi.repository }}
       tag: {{ .Values.images.nubusProvisioningApi.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.api.natsPassword.value | quote}}
+        password: {{ .Values.secrets.nubus.provisioning.api.natsPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.api.natsPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.natsPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.api.natsPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.api.natsPassword.key | quote }}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-api"
       {{- with .Values.annotations.nubusProvisioning.apiPod }}
@@ -1044,7 +1094,13 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningDispatcher.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.value | quote}}
+        password: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.dispatcherNatsPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.dispatcherNatsPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.dispatcherNatsPassword.key | quote }}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-dispatcher"
       {{- with .Values.annotations.nubusProvisioning.dispatcherPod }}
@@ -1123,7 +1179,13 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningPrefill.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.value | quote}}
+        password: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.prefillNatsPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.prefillNatsPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.prefillNatsPassword.key | quote }}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-prefill"
       {{- with .Values.annotations.nubusProvisioning.prefillPod }}
@@ -1142,7 +1204,13 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningUdmTransformer.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.value | quote}}
+        password: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.value | quote }}
+        {{- if .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.name }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.name | quote }}
+          keyMapping:
+            password: {{ required "secrets.nubus.provisioning.udmTransformerNatsPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.key | quote }}
+        {{- end }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-udm-transformer"
       {{- with .Values.annotations.nubusProvisioning.udmTransformerPod }}
@@ -1231,7 +1299,13 @@ nubusUdmListener:
     {{ .Values.resources.umsUdmListener | toYaml | nindent 4 }}
   nats:
     auth:
-      password: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.value | quote}}
+      password: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.value | quote }}
+      {{- if .Values.secrets.nubus.provisioning.udmListenerNatsPassword.name }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.name | quote }}
+        keyMapping:
+          password: {{ required "secrets.nubus.provisioning.udmListenerNatsPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.udmListenerNatsPassword.key | quote }}
+      {{- end }}
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusUdmListener.serviceAccount | toYaml | nindent 6 }}
@@ -1267,7 +1341,13 @@ nubusSelfServiceConsumer:
     {{- end }}
   provisioningApi:
     auth:
-      password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.value | quote}}
+      password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.value | quote }}
+      {{- if .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.name }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.name | quote }}
+        keyMapping:
+          password: {{ required "secrets.nubus.selfserviceConsumer.provisioningApiPassword.key must be set when .name is set" .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.key | quote }}
+      {{- end }}
   resources:
     {{ .Values.resources.umsSelfserviceConsumer | toYaml | nindent 4 }}
   replicaCount: {{ .Values.replicas.umsSelfserviceConsumer }}
