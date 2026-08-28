@@ -76,6 +76,14 @@ provisioningApi:
     auth:
       username: "admin"
       password: {{ .Values.secrets.nubus.provisioning.api.adminPassword.value | quote }}
+      {{- if .Values.secrets.nubus.provisioning.api.adminPassword.name }}
+      # Bring-your-own: must stay in sync with nubusProvisioning.api.auth.admin in
+      # values-nubus.yaml.gotmpl, which consumes the same secret.
+      existingSecret:
+        name: {{ .Values.secrets.nubus.provisioning.api.adminPassword.name | quote }}
+        keyMapping:
+          password: {{ required "secrets.nubus.provisioning.api.adminPassword.key must be set when .name is set" .Values.secrets.nubus.provisioning.api.adminPassword.key | quote }}
+      {{- end }}
 
 resources:
   {{ .Values.resources.oxConnector | toYaml | nindent 2 }}
