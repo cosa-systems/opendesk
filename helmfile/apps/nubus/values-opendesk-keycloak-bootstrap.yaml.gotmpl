@@ -460,6 +460,15 @@ config:
             config:
               introspection.token.claim: true
               access.token.claim: true
+          - name: "dovecot-grant-audience"
+            protocol: "openid-connect"
+            protocolMapper: "oidc-audience-mapper"
+            consentRequired: false
+            config:
+              included.client.audience: "opendesk-dovecot-grant"
+              id.token.claim: false
+              access.token.claim: true
+              introspection.token.claim: true
       opendesk-oxappsuite-scope:
         name: "opendesk-oxappsuite-scope"
         description: "Scope for the claims required by openDesk's OX Appuite instance."
