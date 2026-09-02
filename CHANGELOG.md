@@ -1,3 +1,10 @@
+## [1.18.1](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/compare/v1.18.0...v1.18.1) (2026-09-02)
+
+
+### Bug Fixes
+
+* **open-xchange:** [[#415](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/issues/415)] IMAP login in migration and non-migration mode ([e822f4c](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/commit/e822f4c270dfba7f8edbf0772e780b0661f8e83c))
+
 # [1.18.0](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/compare/v1.17.3...v1.18.0) (2026-08-19)
 
 
