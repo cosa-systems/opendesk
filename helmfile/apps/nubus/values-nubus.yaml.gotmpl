@@ -30,7 +30,16 @@ global:
     {{- end }}
   nubusDeployment: true
   secrets:
+    {{- if .Values.externalSecrets.enabled }}
+    # When the toggle is on, every per-subchart credential below carries
+    # its own `existingSecret` reference. The umbrella's masterPassword
+    # is only a default used to *derive* missing credentials; with every
+    # one explicitly overridden it becomes unused. Set to a placeholder
+    # so the chart doesn't error on the missing value at template time.
+    masterPassword: "externalSecrets-enabled-unused"
+    {{- else }}
     masterPassword: {{ .Values.secrets.nubus.masterpassword.value | quote }}
+    {{- end }}
   subDomains:
     portal: {{ .Values.global.hosts.nubus | quote }}
     keycloak: {{ .Values.global.hosts.keycloak | quote }}
@@ -229,11 +238,18 @@ keycloak:
     auth:
       username: {{ .Values.databases.keycloak.username | quote }}
       database: {{ .Values.databases.keycloak.name | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.dbSecretName | quote }}
+        keyMapping:
+          password: "PG_KEYCLOAK"
+      {{- else }}
       # TODO: Pending secrets refactoring to be able to provide the value directly
       existingSecret:
         name: "ums-keycloak-postgresql-opendesk-credentials"
         keyMapping:
           password: keycloakDatabasePassword
+      {{- end }}
   replicaCount: {{ .Values.replicas.keycloak }}
   resources:
     {{ .Values.resources.umsKeycloak | toYaml | nindent 4 }}
@@ -277,7 +293,14 @@ keycloak:
     - name: "KC_TRUSTSTORE_PATHS"
       value: "/etc/ssl/certs/ca-certificates.crt"
     - name: "KC_HTTPS_TRUST_STORE_PASSWORD"
+      {{- if .Values.externalSecrets.enabled }}
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "CERTIFICATES_PASSWORD"
+      {{- else }}
       value: {{ .Values.secrets.certificates.password.value | quote }}
+      {{- end }}
     - name: "KC_HTTPS_TRUST_STORE_TYPE"
       value: "jks"
   {{- end }}
@@ -337,12 +360,19 @@ nubusNotificationsApi:
     auth:
       username: {{ .Values.databases.umsNotificationsApi.username | quote }}
       database: {{ .Values.databases.umsNotificationsApi.name | quote }}
-      password: {{ .Values.databases.umsNotificationsApi.password.value | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.dbSecretName | quote }}
+        keyMapping:
+          password: "PG_UMS_NOTIFICATIONS"
+      {{- else }}
+      password: {{ .Values.databases.umsNotificationsApi.password.value | default .Values.secrets.postgresql.umsNotificationsApiUser | quote }}
       # NOTE: Nubus has still an existing secret configured for legacy reasons.
       # This disables the existing secret and ensures that the value from above
       # is used.
       existingSecret:
         name: null
+      {{- end }}
   service:
     annotations:
       {{ .Values.annotations.nubusNotificationsApi.service | toYaml | nindent 6 }}
@@ -502,11 +532,18 @@ nubusKeycloakExtensions:
     auth:
       database: {{ .Values.databases.keycloakExtension.name | quote }}
       username: {{ .Values.databases.keycloakExtension.username | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.dbSecretName | quote }}
+        keyMapping:
+          password: "PG_KEYCLOAK_EXTENSIONS"
+      {{- else }}
       # TODO: Pending secrets refactoring for this component chart
       existingSecret:
         name: "ums-keycloak-extensions-postgresql-opendesk-credentials"
         keyMapping:
           password: "umcKeycloakExtensionsDatabasePassword"
+      {{- end }}
   smtp:
     connection:
       host: {{ printf "%s.%s.svc.%s" "postfix" (.Values.apps.postfix.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
@@ -516,12 +553,19 @@ nubusKeycloakExtensions:
     auth:
       enabled: true
       username: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+      {{- else }}
       # TODO: Pending secrets refactoring in the component chart
       password: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
       existingSecret:
         name: "ums-keycloak-extensions-smtp-opendesk-credentials"
         keyMapping:
           password: "umcKeycloakExtensionsSmtpPassword"
+      {{- end }}
   handler:
     additionalAnnotations:
       {{ .Values.annotations.nubusKeycloakExtensions.handlerAdditional | toYaml | nindent 6 }}
@@ -577,8 +621,16 @@ nubusPortalConsumer:
   objectStorage:
     auth:
       accessKeyId: {{ .Values.objectstores.nubus.username | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: "opendesk-s3-credentials"
+        keyMapping:
+          accessKeyId: "access-key-id"
+          secretAccessKey: "secret-access-key"
+      {{- else }}
       secretAccessKey: {{ .Values.objectstores.nubus.secretKey.value | quote }}
       existingSecret: null
+      {{- end }}
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
     endpoint: {{ printf "https://%s" .Values.objectstores.nubus.endpoint | quote }}
@@ -721,8 +773,18 @@ nubusPortalServer:
   objectStorage:
     auth:
       accessKeyId: {{ .Values.objectstores.nubus.username | quote }}
+      {{- if .Values.externalSecrets.enabled }}
+      # The chart requires (accessKeyId AND secretAccessKey) OR existingSecret.name; on the
+      # externalSecrets path the key id is not rendered, so point at the cluster Secret.
+      existingSecret:
+        name: "opendesk-s3-credentials"
+        keyMapping:
+          accessKeyId: "access-key-id"
+          secretAccessKey: "secret-access-key"
+      {{- else }}
       secretAccessKey: {{ .Values.objectstores.nubus.secretKey.value | quote }}
       existingSecret: null
+      {{- end }}
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
     endpoint: {{ printf "https://%s" .Values.objectstores.nubus.endpoint | quote }}
@@ -745,7 +807,22 @@ nubusPortalServer:
     centralNavigation:
       enabled: true
       auth:
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          keyMapping:
+            # cosa: the chart's internal central-nav key is snake_case
+            # `shared_secret` (cf. nubus-stack ci/external-dependencies/
+            # nubus-existing-secrets.yaml.gotmpl). The camelCase `sharedSecret`
+            # missed the keyMapping, so the portal-server mounted subPath
+            # `shared_secret` (absent) -> empty DIR at
+            # /var/secrets/authenticator.secret -> IsADirectoryError -> every
+            # authenticated central-navigation request 500'd (XWiki app-launcher
+            # "Failed to get a server response").
+            shared_secret: "CENTRALNAVIGATION_API_KEY"
+        {{- else }}
         sharedSecret: {{ .Values.secrets.centralnavigation.apiKey.value | quote }}
+        {{- end }}
     featureToggles:
       notifications_api: false
       centered_layout: true
@@ -1119,7 +1196,15 @@ nubusProvisioning:
       createUsers:
         adminUser:
           auth:
+            {{- if .Values.externalSecrets.enabled }}
+            # nats chart: createUsers.adminUser.auth.existingSecret + keyMapping (nubus-common.secrets.key)
+            existingSecret:
+              name: {{ .Values.externalSecrets.name | quote }}
+              keyMapping:
+                password: "NUBUS_NATS_ADMIN_PASSWORD"
+            {{- else }}
             password: {{ .Values.secrets.nats.natsAdminPassword.value | quote }}
+            {{- end }}
     containerSecurityContext:
       privileged: false
       allowPrivilegeEscalation: false
@@ -1455,8 +1540,33 @@ nubusStackDataUms:
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusStackDataUms.serviceAccount | toYaml | nindent 6 }}
+  {{- if .Values.externalSecrets.enabled }}
+  # Chart-fork (cosa-systems/ums-stack-data) gates each context-user
+  # password Secret on `existingSecret.name`. When set, the chart skips
+  # emitting its own Secret + omits the matching key from the rendered
+  # context Secret. A `prepare-context` initContainer merges the
+  # externally-provided passwords back into context.yaml at Job runtime.
+  contextUsers:
+    svcPortalServer:
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SYSTEMACCOUNTS_SVC_PORTAL_SERVER"
+    administrator:
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SYSTEMACCOUNTS_ADMINISTRATOR"
+    readonlyUser:
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_SYSTEMACCOUNTS_READONLY"
+  {{- end }}
   templateContext:
+    {{- if not .Values.externalSecrets.enabled }}
     initialPasswordAdministrator: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.value | quote }}
+    {{- end }}
     additionalMailDomains: {{ .Values.global.additionalMailDomains | toYaml | nindent 6 }}
     apps: {{ .Values.apps | toYaml | nindent 6 }}
     defaultGroupOtherObjects: "cn=Domain Users,cn=groups,{{ .Values.ldap.baseDn }}"
@@ -1493,6 +1603,17 @@ nubusStackDataUms:
     oxDefaultContext: "1"
     oxDefaultLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
     oxContextHidden: true
+    {{- if .Values.externalSecrets.enabled }}
+    # LDAP search-user passwords are bootstrap-time values that the
+    # nubus chart writes into LDAP at install. Once bootstrapped the
+    # cluster's `opendesk-internal-credentials.NUBUS_LDAPSEARCH_*`
+    # keys carry the source of truth; consumers (postfix, dovecot,
+    # ...) read from there. The bootstrap itself runs once; on a
+    # rotate, operator updates the LDAP user passwords directly via
+    # ldap-server admin tooling rather than re-rendering.
+    oxSystemUserPassword: ""
+    ldapSearchUsers: []
+    {{- else }}
     oxSystemUserPassword: {{ .Values.secrets.nubus.ldapSearch.ox.value }}
     portalOxLinkBase: {{ printf "https://%s.%s" .Values.global.hosts.openxchange .Values.global.domain }}
     ldapSearchUsers:
@@ -1501,6 +1622,8 @@ nubusStackDataUms:
         password: {{ $password.value | quote }}
         lastname: "LDAP-Search-User"
       {{- end }}
+    {{- end }}
+    portalOxLinkBase: {{ printf "https://%s.%s" .Values.global.hosts.openxchange .Values.global.domain }}
     ldapSystemUsers: []
     portaltileGroupUserStandard:
       - "cn=Domain Users,cn=groups,{{ .Values.ldap.baseDn }}"
@@ -1626,12 +1749,19 @@ nubusUmcServer:
       auth:
         username: {{ .Values.databases.umsSelfservice.username | quote }}
         database: {{ .Values.databases.umsSelfservice.name | quote }}
-        password: {{ .Values.databases.umsSelfservice.password.value | quote }}
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.dbSecretName | quote }}
+          keyMapping:
+            password: "PG_UMS_SELFSERVICE"
+        {{- else }}
+        password: {{ .Values.databases.umsSelfservice.password.value | default .Values.secrets.postgresql.umsSelfserviceUser | quote }}
         # NOTE: Nubus has still an existing secret configured for legacy reasons.
         # This disables the existing secret and ensures that the value from above
         # is used.
         existingSecret:
           name: null
+        {{- end }}
     authSession:
       connection:
         host: {{ .Values.databases.umsAuthSession.host | quote }}
@@ -1639,12 +1769,19 @@ nubusUmcServer:
       auth:
         username: {{ .Values.databases.umsAuthSession.username | quote }}
         database: {{ .Values.databases.umsAuthSession.name | quote }}
-        password: {{ .Values.databases.umsAuthSession.password.value | quote }}
+        {{- if .Values.externalSecrets.enabled }}
+        existingSecret:
+          name: {{ .Values.externalSecrets.dbSecretName | quote }}
+          keyMapping:
+            password: "PG_UMS_AUTHSESSION"
+        {{- else }}
+        password: {{ .Values.databases.umsAuthSession.password.value | default .Values.secrets.postgresql.umsAuthSessionUser | quote }}
         # NOTE: Nubus has still an existing secret configured for legacy reasons.
         # This disables the existing secret and ensures that the value from above
         # is used.
         existingSecret:
           name: null
+        {{- end }}
   proxy:
     image:
       registry: {{ coalesce .Values.repositories.image.dockerHub .Values.global.imageRegistry .Values.images.nubusUmcServerProxy.registry | quote }}
@@ -1675,7 +1812,14 @@ nubusUmcServer:
       {{ .Values.annotations.nubusUmcServer.serviceAccount | toYaml | nindent 6 }}
   smtp:
     auth:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+      {{- else }}
       password: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
+      {{- end }}
 
 nubusUmcGateway:
   containerSecurityContext:
@@ -1777,12 +1921,27 @@ nubusKeycloakBootstrap:
   ldap:
     auth:
       bindDn: {{ printf "uid=ldapsearch_keycloak,cn=users,%s" .Values.ldap.baseDn }}
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        keyMapping:
+          password: "NUBUS_LDAPSEARCH_KEYCLOAK"
+      {{- else }}
       existingSecret:
         name: "ums-keycloak-bootstrap-ldap-opendesk-credentials"
+      {{- end }}
   oidc:
-    rp:
+    relyingParty:
       umcServer:
-        password: {{ .Values.secrets.keycloak.clientSecret.portal.value | quote }}
+        clientSecret:
+          {{- if .Values.externalSecrets.enabled }}
+          existingSecret:
+            name: {{ .Values.externalSecrets.name | quote }}
+            keyMapping:
+              password: "KEYCLOAK_CLIENTSECRET_PORTAL"
+          {{- else }}
+          password: {{ .Values.secrets.keycloak.clientSecret.portal.value | quote }}
+          {{- end }}
   podAnnotations:
     intents.otterize.com/service-name: "ums-keycloak-bootstrap"
     {{- with .Values.annotations.nubusKeycloakBootstrapNubus.pod }}
@@ -1803,7 +1962,18 @@ nubusKeycloakBootstrap:
     annotations:
       {{ .Values.annotations.nubusKeycloakBootstrapNubus.serviceAccount | toYaml | nindent 6 }}
 
-# Credential secrets for accessing customer supplied services
+# Credential secrets for accessing customer supplied services. The
+# upstream umbrella chart emits these as helmfile-template-time
+# stringData Secrets; consumer subcharts (keycloak, guardian,
+# keycloak-extensions, keycloak-bootstrap) reference them by name.
+# With externalSecrets on, the umbrella still emits the *empty*
+# Secret skeletons so the chart's existingSecret references resolve,
+# but each consumer needs its existingSecret pointed at
+# `opendesk-internal-credentials` separately (see the per-component
+# `existingSecret.name` references higher up in this file).
+{{- if .Values.externalSecrets.enabled }}
+extraSecrets: []
+{{- else }}
 extraSecrets:
   - name: "ums-opendesk-guardian-client-secret"
     stringData:
@@ -1823,6 +1993,12 @@ extraSecrets:
   - name: "ums-keycloak-bootstrap-ldap-opendesk-credentials"
     stringData:
       password: {{ .Values.secrets.nubus.ldapSearch.keycloak.value | quote }}
+{{- end }}
+{{- /* cosa: the ox-connector subscription Secret below inlines
+       secrets.oxConnector.provisioningApiPassword.value; on the externalSecrets render
+       path that value is a dummy, so the Secret is provisioned cluster-side instead
+       (bootstrap-secrets: ums-ox-connector-provisioning-api / registration). */}}
+{{- if not .Values.externalSecrets.enabled }}
 {{- if .Values.apps.oxAppSuite.enabled }}
   - name: "ums-ox-connector-provisioning-api"
     stringData:
@@ -1846,3 +2022,4 @@ extraSecrets:
         }
 {{- end }}
 ...
+{{- end }}

@@ -32,14 +32,26 @@ dovecot:
   migration:
     enabled: {{ .Values.functional.migration.oxAppSuite.enabled }}
     masterPassword:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "OXAPPSUITE_MIGRATIONS_MASTER_PASSWORD"
+      {{- else }}
       value: {{ .Values.secrets.oxAppSuite.migrationsMasterPassword.value | quote }}
+      {{- end }}
   ldap:
     host: {{ .Values.ldap.host | quote }}
     port: 389
     base: "{{ .Values.ldap.baseDn }}"
     dn: "uid=ldapsearch_dovecot,cn=users,{{ .Values.ldap.baseDn }}"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_DOVECOT"
+      {{- else }}
       value: {{ .Values.secrets.nubus.ldapSearch.dovecot.value | quote }}
+      {{- end }}
   loginTrustedNetworks: {{ join " " .Values.cluster.networking.cidr | quote }}
   oidc:
     clientID:
@@ -68,7 +80,13 @@ dovecot:
     url: "http://open-xchange-core-mw-http-api"
     username: "rest-api"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "OXAPPSUITE_REST_API_PASSWORD"
+      {{- else }}
       value: {{ .Values.secrets.oxAppSuite.restApiPassword.value | quote }}
+      {{- end }}
   protocol:
     imap:
       limits:

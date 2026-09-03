@@ -10,12 +10,24 @@ global:
 
 configuration:
   adminBot:
+    {{- if .Values.externalSecrets.enabled }}
+    backupPhraseExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "MATRIX_ADMINBOT_BACKUP_PASSPHRASE"
+    {{- else }}
     backupPhrase: {{ .Values.secrets.matrixAdminBot.backupPassphrase.value | quote }}
+    {{- end }}
     #name: "adminbot"
     #secretName: "matrix-adminbot-account"
     #secretKey: "access_token"
   auditBot:
+    {{- if .Values.externalSecrets.enabled }}
+    backupPhraseExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "MATRIX_AUDITBOT_BACKUP_PASSPHRASE"
+    {{- else }}
     backupPhrase: {{ .Values.secrets.matrixAuditBot.backupPassphrase.value | quote }}
+    {{- end }}
     #name: "auditbot"
   database:
     host: {{ .Values.databases.synapse.host | quote }}
@@ -23,7 +35,13 @@ configuration:
     name: {{ .Values.databases.synapse.name | quote }}
     user: {{ .Values.databases.synapse.username | quote }}
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.dbSecretName | quote }}
+        key: "PG_SYNAPSE"
+      {{- else }}
       value: {{ .Values.databases.synapse.password.value | quote }}
+      {{- end }}
     requireAuth: {{ .Values.databases.synapse.requireAuth }}
     channelBinding: {{ .Values.databases.synapse.channelBinding | quote }}
     connectTimeout: {{ .Values.databases.synapse.connectTimeout }}
@@ -47,7 +65,13 @@ configuration:
   ldap:
     base: {{ .Values.ldap.baseDn | quote }}
     bind_dn: "uid=ldapsearch_element,cn=users,{{ .Values.ldap.baseDn }}"
+    {{- if .Values.externalSecrets.enabled }}
+    bindPasswordExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "NUBUS_LDAPSEARCH_ELEMENT"
+    {{- else }}
     bind_password: {{ .Values.secrets.nubus.ldapSearch.element.value | quote }}
+    {{- end }}
     filter: "(memberOf=cn=managed-by-attribute-LivecollaborationAdmin,cn=groups,{{ .Values.ldap.baseDn }})"
     uri: {{ printf "ldap://%s:389" .Values.ldap.host | quote }}
 cron:

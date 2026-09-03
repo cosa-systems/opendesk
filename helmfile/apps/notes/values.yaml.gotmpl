@@ -29,7 +29,19 @@ global:
     accessKeyId:
       value: {{ .Values.objectstores.notes.username | quote }}
     secretAccessKey:
+      {{- if .Values.externalSecrets.enabled }}
+      # Checked first: since 1.17 `secretKey.value` always carries the
+      # master-password-derived default, so testing it first would inline it.
+      existingSecret:
+        name: "opendesk-s3-credentials"
+        key: "secret-access-key"
+      {{- else if .Values.objectstores.notes.secretKey.value }}
       value: {{ .Values.objectstores.notes.secretKey.value | quote }}
+      {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
+      value: {{ .Values.secrets.minio.notesUser | quote }}
+      {{- else }}
+      {{- fail "No objectstorage secretkey for notes found!" }}
+      {{- end }}
 
 backend:
   image:
@@ -70,7 +82,14 @@ backend:
       host: {{ .Values.databases.notes.host | quote }}
       name: {{ .Values.databases.notes.name | quote }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        # The impress chart reads the password Secret ref FLAT (configuration.database.password.name/key),
+        # unlike `user`, which uses existingSecret.{name,key} — upstream inconsistency, MR candidate.
+        name: {{ .Values.externalSecrets.dbSecretName | quote }}
+        key: "PG_NOTES"
+        {{- else }}
         value: {{ .Values.databases.notes.password.value | quote }}
+        {{- end }}
       port: {{ .Values.databases.notes.port | quote }}
       user:
         value: {{ .Values.databases.notes.username | quote }}
@@ -123,7 +142,13 @@ backend:
           key: {{ .Values.secrets.notes.superuser.key | quote }}
     frontendTheme: "openDesk"
     redisUrl:
-      value: "redis{{ if .Values.cache.notes.tls }}s{{ else }}{{ end }}://{{ .Values.cache.notes.username }}:{{ .Values.cache.notes.password.value | default .Values.cache.redis.password.value }}@{{ .Values.cache.notes.host }}:{{ .Values.cache.notes.port }}/7"
+      {{- if .Values.externalSecrets.enabled }}
+      existingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NOTES_REDIS_URL"
+      {{- else }}
+      value: "redis{{ if .Values.cache.notes.tls.value }}s{{ else }}{{ end }}://{{ .Values.cache.notes.username.value }}:{{ .Values.cache.notes.password.value | default .Values.cache.redis.password.value }}@{{ .Values.cache.notes.host.value }}:{{ .Values.cache.notes.port.value }}/7"
+      {{- end }}
   extraEnvVars:
     - name: "FRONTEND_HOMEPAGE_FEATURE_ENABLED"
       value: "False"

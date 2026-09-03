@@ -21,7 +21,7 @@ cache:
     password:
       # A non-empty MASTER_PASSWORD is enforced in `secrets.yaml.gotmpl`, which every helmfile run
       # renders alongside this file.
-      value: {{ derivePassword 1 "long" (env "MASTER_PASSWORD") "redis" "password" | sha1sum | quote }}
+      value: {{ derivePassword 1 "long" (env "MASTER_PASSWORD" | default "x") "redis" "password" | sha1sum | quote }}
       create: true
       name: "redis-password"
       key: "redis-password"

@@ -43,7 +43,23 @@ javaOptsSecrets:
 {{- end }}
 
 externalDB:
-  {{- if eq .Values.databases.xwiki.type "mariadb" }}
+  {{- if .Values.externalSecrets.enabled }}
+  customKeyRef:
+    enabled: true
+    # The xwiki chart reads externalDB.customKeyRef.key (flat — see
+    # templates/_helpers.tpl "xwiki.database.env"); nesting it under
+    # `password:` left the rendered secretKeyRef.key empty (invalid).
+    # mariadb password lives in the consolidated secret; the postgres
+    # password lives in db-passwords/PG_XWIKI (set by the db-bootstrap job,
+    # so the chart connects with the same value the role was created with).
+    {{- if eq .Values.databases.xwiki.type "mariadb" }}
+    name: {{ .Values.externalSecrets.name | quote }}
+    key: "MARIADB_XWIKI_USER"
+    {{- else }}
+    name: {{ .Values.externalSecrets.dbSecretName | quote }}
+    key: "PG_XWIKI"
+    {{- end }}
+  {{- else if eq .Values.databases.xwiki.type "mariadb" }}
   password: {{ .Values.secrets.mariadb.rootPassword.value | quote }}
   {{- else }}
   password: {{ .Values.databases.xwiki.password.value | quote }}
@@ -51,8 +67,10 @@ externalDB:
   database: {{ .Values.databases.xwiki.name | quote }}
   user: {{ .Values.databases.xwiki.username | quote }}
   host: {{ printf "%s:%d" .Values.databases.xwiki.host .Values.databases.xwiki.port | quote }}
+  {{- if not .Values.externalSecrets.enabled }}
   customKeyRef:
     enabled: false
+  {{- end }}
 
 securityContext:
   enabled: true
@@ -88,6 +106,8 @@ customConfigs:
     xwiki.authentication.ldap.port: 389
     ## Authentication to the LDAP server
     xwiki.authentication.ldap.bind_DN: "uid=ldapsearch_xwiki,cn=users,{{ .Values.ldap.baseDn }}"
+    {{- if not .Values.externalSecrets.enabled }}
+    {{- end }}
     ## Base DN used for searching for users
     xwiki.authentication.ldap.base_DN: "{{ .Values.ldap.baseDn }}"
     ## Allow short update cycles of the LDAP group cache
@@ -108,6 +128,8 @@ customConfigs:
     oidc.logoutMechanism: "rpInitiated"
     oidc.provider: "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/opendesk"
     oidc.scope: "openid,opendesk-xwiki-scope"
+    {{- if not .Values.externalSecrets.enabled }}
+    {{- end }}
     oidc.skipped: false
     oidc.user.nameFormater: "${oidc.user.opendesk_username._clean}"
     oidc.user.subjectFormater: "${oidc.user.opendesk_username}"
@@ -119,6 +141,8 @@ customConfigs:
     url.trustedDomains: "{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}"
     workplaceServices.navigationEndpoint: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}/univention/portal/navigation.json"
     workplaceServices.base: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}"
+    {{- if not .Values.externalSecrets.enabled }}
+    {{- end }}
     openoffice.serverType: "0"
     openoffice.autoStart: "false"
     openoffice.homePath: "/tmp"
@@ -208,6 +232,8 @@ properties:
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.port": 25
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.properties": "mail.smtp.starttls.enable=false"
   "property:xwiki:Mail.MailConfig^Mail.SendMailConfigClass.username": {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
+  {{- if not .Values.externalSecrets.enabled }}
+  {{- end }}
   ## Link LDAP users and users authenticated through OIDC
   "property:xwiki:LDAPUserImport.WebHome^LDAPUserImport.LDAPUserImportConfigClass.addOIDCObject": 1
   "property:xwiki:LDAPUserImport.WebHome^LDAPUserImport.LDAPUserImportConfigClass.OIDCIssuer": "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/{{ .Values.platform.realm }}"

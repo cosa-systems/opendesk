@@ -94,7 +94,18 @@ config:
     admin:
       values:
         username: "kcadmin"
+        {{- if .Values.externalSecrets.enabled }}
+        password: ""
+        {{- else }}
         password: {{ .Values.secrets.keycloak.adminPassword.value | quote }}
+        {{- end }}
+      {{- if .Values.externalSecrets.enabled }}
+      # Chart-native: a bring-your-own Secret in the chart's `admin.yaml:
+      # {username, password}` format; the chart then renders no admin-creds
+      # Secret of its own. Provisioned out-of-band (e.g. bootstrap_secrets.py).
+      secret:
+        name: "opendesk-keycloak-bootstrap-admin-creds"
+      {{- end }}
     realm: {{ .Values.platform.realm | quote }}
     intraCluster:
       enabled: true

@@ -37,6 +37,15 @@ oxConnector:
   extraEnvVars:
     - name: "OX_CONNECTOR_STOP_ON_ERROR"
       value: "True"
+    {{- if .Values.externalSecrets.enabled }}
+    # See openXchange.oxDbConnectionString: the DB password reaches libpq via
+    # PGPASSWORD (the chart renders extraEnvVars into every container).
+    - name: "PGPASSWORD"
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.databases.oxConnector.password.name | quote }}
+          key: {{ .Values.databases.oxConnector.password.key | quote }}
+    {{- end }}
 
 openXchange:
   domainName: {{ .Values.global.domain | quote }}
@@ -47,7 +56,14 @@ openXchange:
   oxLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
   auth:
     username: "admin"
+    {{- if .Values.externalSecrets.enabled }}
+    existingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      keyMapping:
+        password: "OXAPPSUITE_ADMIN_PASSWORD"
+    {{- else }}
     password: {{ .Values.secrets.oxAppSuite.adminPassword.value | quote }}
+    {{- end }}
   oxSmtpServer: "smtp://127.0.0.1:587"
   oxSoapServer: {{ printf "http://%s.%s.svc.%s" "open-xchange-core-mw-admin" (.Values.apps.oxAppSuite.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
   oxSharedAccount: true
@@ -55,12 +71,24 @@ openXchange:
     userIdentifier: "univentionObjectIdentifier"
     groupIdentifier: "univentionObjectIdentifier"
     sharedAccountIdentifier: "univentionObjectIdentifier"
+  {{- if .Values.externalSecrets.enabled }}
+  # The chart renders this string into its `-db-connection-string` Secret as
+  # is (no existingSecret knob), so the DSN carries no password here: libpq
+  # picks it up from PGPASSWORD, injected via `oxConnector.extraEnvVars` from
+  # `databases.oxConnector.password.name/key`.
+  oxDbConnectionString: {{ printf "postgresql://%s@%s:%v/%s"
+    (.Values.databases.oxConnector.username | urlquery | replace "+" "%20")
+    .Values.databases.oxConnector.host
+    .Values.databases.oxConnector.port
+    .Values.databases.oxConnector.name | quote }}
+  {{- else }}
   oxDbConnectionString: {{ printf "postgresql://%s:%s@%s:%v/%s"
     (.Values.databases.oxConnector.username | urlquery | replace "+" "%20")
     (.Values.databases.oxConnector.password.value | urlquery | replace "+" "%20")
     .Values.databases.oxConnector.host
     .Values.databases.oxConnector.port
     .Values.databases.oxConnector.name | quote }}
+  {{- end }}
 
 provisioningApi:
   connection:

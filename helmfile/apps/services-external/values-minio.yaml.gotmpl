@@ -230,6 +230,12 @@ provisioning:
           actions:
             - "s3:*"
     {{- end }}
+  {{- if .Values.externalSecrets.enabled }}
+  # Bitnami minio's provisioning Job reads user definitions from each
+  # named Secret's keys; operator provisions the per-user creds there.
+  usersExistingSecrets:
+    - "opendesk-minio-users"
+  {{- else }}
   users:
     - username: {{ .Values.objectstores.migrations.username | quote }}
       password: {{ .Values.objectstores.migrations.secretKey.value | quote }}
@@ -275,6 +281,7 @@ provisioning:
         - "dovecot-bucket-policy"
       setPolicies: true
     {{- end }}
+  {{- end }}
   resources:
     {{ .Values.resources.minio | toYaml | nindent 4 }}
 

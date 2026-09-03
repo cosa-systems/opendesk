@@ -40,7 +40,18 @@ configuration:
     name: {{ .Values.databases.synapse.name | quote }}
     user: {{ .Values.databases.synapse.username | quote }}
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      # Bare password sourced from the cluster-side Secret; the chart's
+      # build-pgpass initContainer formats /secret/pgpass.conf into an
+      # emptyDir at startup and no chart-emitted password Secret is
+      # rendered. Toggle via `externalSecrets.enabled` (default-env
+      # `external-secrets.yaml.gotmpl`).
+      existingSecret:
+        name: {{ .Values.externalSecrets.dbSecretName | quote }}
+        key: "PG_SYNAPSE"
+      {{- else }}
       value: {{ .Values.databases.synapse.password.value | quote }}
+      {{- end }}
     requireAuth: {{ .Values.databases.synapse.requireAuth }}
     channelBinding: {{ .Values.databases.synapse.channelBinding | quote }}
     connectTimeout: {{ .Values.databases.synapse.connectTimeout }}
@@ -61,18 +72,36 @@ configuration:
     serverName: {{ .Values.global.matrixDomain | default .Values.global.domain }}
     defaultRoomVersion: 12
     appServiceConfigs:
-      - as_token: {{ .Values.secrets.intercom.synapseAsToken.value | quote }}
+      - id: intercom-service
+        {{- if .Values.externalSecrets.enabled }}
+        as_token: ""
+        hs_token: ""
+        tokenExistingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          asTokenKey: "INTERCOM_SYNAPSE_AS_TOKEN"
+          hsTokenKey: "INTERCOM_SYNAPSE_AS_TOKEN"
+        {{- else }}
+        as_token: {{ .Values.secrets.intercom.synapseAsToken.value | quote }}
         hs_token: {{ .Values.secrets.intercom.synapseAsToken.value | quote }}
-        id: intercom-service
+        {{- end }}
         namespaces:
           users:
             - exclusive: false
               regex: "@.*"
         url: null
         sender_localpart: intercom-service
-      - as_token: {{ .Values.secrets.oxAppSuite.synapseAsToken.value | quote }}
+      - id: ox-appsuite
+        {{- if .Values.externalSecrets.enabled }}
+        as_token: ""
+        hs_token: ""
+        tokenExistingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          asTokenKey: "OXAPPSUITE_SYNAPSE_AS_TOKEN"
+          hsTokenKey: "OXAPPSUITE_SYNAPSE_AS_TOKEN"
+        {{- else }}
+        as_token: {{ .Values.secrets.oxAppSuite.synapseAsToken.value | quote }}
         hs_token: {{ .Values.secrets.oxAppSuite.synapseAsToken.value | quote }}
-        id: ox-appsuite
+        {{- end }}
         namespaces:
           users:
             - exclusive: false
@@ -81,9 +110,18 @@ configuration:
         sender_localpart: ox-appsuite
     {{- if eq (env "OPENDESK_ENTERPRISE") "true" }}
       {{- if .Values.apps.elementAdmin.enabled }}
-      - as_token: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
+      - id: "element-adminbot-pipe"
+        {{- if .Values.externalSecrets.enabled }}
+        as_token: ""
+        hs_token: ""
+        tokenExistingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          asTokenKey: "MATRIX_ADMINBOT_SYNAPSE_AS_TOKEN"
+          hsTokenKey: "MATRIX_ADMINBOT_SYNAPSE_AS_TOKEN"
+        {{- else }}
+        as_token: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
         hs_token: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
-        id: "element-adminbot-pipe"
+        {{- end }}
         namespaces:
           rooms:
             - exclusive: false
@@ -98,9 +136,18 @@ configuration:
         url: "http://opendesk-synapse-adminbot-pipe:9995"
         rate_limited: false
         sender_localpart: "adminbot-sendernotinuse"
-      - as_token: {{ .Values.secrets.matrixAuditBot.synapseAsToken.value | quote }}
+      - id: "element-auditbot-pipe"
+        {{- if .Values.externalSecrets.enabled }}
+        as_token: ""
+        hs_token: ""
+        tokenExistingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          asTokenKey: "MATRIX_AUDITBOT_SYNAPSE_AS_TOKEN"
+          hsTokenKey: "MATRIX_AUDITBOT_SYNAPSE_AS_TOKEN"
+        {{- else }}
+        as_token: {{ .Values.secrets.matrixAuditBot.synapseAsToken.value | quote }}
         hs_token: {{ .Values.secrets.matrixAuditBot.synapseAsToken.value | quote }}
-        id: "element-auditbot-pipe"
+        {{- end }}
         namespaces:
           rooms:
             - exclusive: false
@@ -117,9 +164,18 @@ configuration:
         sender_localpart: "auditbot-sendernotinuse"
       {{- end }}
       {{- if .Values.apps.elementGroupsync.enabled }}
-      - as_token: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
+      - id: "gps"
+        {{- if .Values.externalSecrets.enabled }}
+        as_token: ""
+        hs_token: ""
+        tokenExistingSecret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          asTokenKey: "MATRIX_GROUPSYNC_SYNAPSE_AS_TOKEN"
+          hsTokenKey: "MATRIX_GROUPSYNC_SYNAPSE_AS_TOKEN"
+        {{- else }}
+        as_token: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
         hs_token: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
-        id: "gps"
+        {{- end }}
         namespaces:
           rooms:
             - exclusive: false
@@ -131,7 +187,13 @@ configuration:
         rate_limited: false
         sender_localpart: "groupsyncbot"
       {{- end }}
+    {{- if .Values.externalSecrets.enabled }}
+    registrationSharedSecretExistingSecret:
+      name: {{ .Values.externalSecrets.name | quote }}
+      key: "SYNAPSE_REGISTRATION_SHARED_SECRET"
+    {{- else }}
     registrationSharedSecret: {{ .Values.secrets.synapse.registrationSharedSecret.value | quote }}
+    {{- end }}
     {{- end }}
 
     presence:
@@ -147,11 +209,28 @@ configuration:
       tls: false
       starttls: false
       username: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
+      {{- if .Values.externalSecrets.enabled }}
+      # SMTP password sourced from the cluster-side Secret; the chart's
+      # build-smtp-override initContainer materialises a small
+      # `smtp-override.yaml` into an emptyDir at startup which Synapse
+      # merges via an additional `--config-path` argument, so
+      # `smtp_pass:` never lands in the homeserver.yaml ConfigMap.
+      passwordExistingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "POSTFIX_OPENDESK_SYSTEM_PASSWORD"
+      {{- else }}
       password: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
+      {{- end }}
 
     oidc:
       clientId: "opendesk-matrix"
+      {{- if .Values.externalSecrets.enabled }}
+      clientSecretExistingSecret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "KEYCLOAK_CLIENTSECRET_MATRIX"
+      {{- else }}
       clientSecret: {{ .Values.secrets.keycloak.clientSecret.matrix.value | quote }}
+      {{- end }}
       issuer: "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/{{ .Values.platform.realm }}"
       matrixIdLocalpart: {{ if .Values.functional.chat.matrix.profile.useImmutableIdentifierForLocalpart }}"opendesk_objectid"{{ else }}"opendesk_username"{{ end }}
       matrixIdSubject: "opendesk_objectid"
@@ -160,7 +239,16 @@ configuration:
         - "opendesk-matrix-scope"
 
     turn:
+      {{- if .Values.externalSecrets.enabled }}
+      # TURN_CREDENTIALS already lives in the cluster-side `db-passwords`
+      # Secret next to the per-component DB passwords; reuse that instead
+      # of duplicating it into `opendesk-internal-credentials`.
+      sharedSecretExistingSecret:
+        name: "db-passwords"
+        key: "TURN_CREDENTIALS"
+      {{- else }}
       sharedSecret: {{ .Values.turn.credentials | quote }}
+      {{- end }}
       servers:
         {{- if .Values.turn.tls.host }}
         - server: {{ .Values.turn.tls.host | quote }}

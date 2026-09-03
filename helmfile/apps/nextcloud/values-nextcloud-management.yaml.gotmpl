@@ -51,7 +51,13 @@ configuration:
       username:
         value: {{ .Values.cache.nextcloud.username }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "REDIS_PASSWORD"
+        {{- else }}
         value: {{ .Values.cache.nextcloud.password.value | default .Values.cache.redis.password.value | quote }}
+        {{- end }}
     host: {{ .Values.cache.nextcloud.host | quote }}
     port: {{ .Values.cache.nextcloud.port | quote }}
     tls: {{ .Values.cache.nextcloud.tls }}
@@ -105,7 +111,22 @@ configuration:
       username:
         value: {{ .Values.databases.nextcloud.username | quote }}
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          {{- if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "MARIADB_NEXTCLOUD_USER"
+          {{- else }}
+          name: {{ .Values.externalSecrets.dbSecretName | quote }}
+          key: "PG_NEXTCLOUD"
+          {{- end }}
+        {{- else if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
+        value: {{ .Values.databases.nextcloud.password.value | default .Values.secrets.mariadb.nextcloudUser | quote }}
+        {{- else if or (eq .Values.databases.nextcloud.type "postgresql") (eq .Values.databases.nextcloud.type "psql") }}
+        value: {{ .Values.databases.nextcloud.password.value | default .Values.secrets.postgresql.nextcloudUser | quote }}
+        {{- else }}
         value: {{ .Values.databases.nextcloud.password.value | quote }}
+        {{- end }}
 
   i18n:
     language:
@@ -118,7 +139,13 @@ configuration:
     host: {{ .Values.ldap.host | quote }}
     dn: "uid=ldapsearch_nextcloud,cn=users,{{ .Values.ldap.baseDn }}"
     password:
+      {{- if .Values.externalSecrets.enabled }}
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NUBUS_LDAPSEARCH_NEXTCLOUD"
+      {{- else }}
       value: {{ .Values.secrets.nubus.ldapSearch.nextcloud.value | quote }}
+      {{- end }}
     ldapLoginFilter: "(&(opendeskFileshareEnabled=TRUE)(univentionObjectIdentifier=%uid))"
     # Semicolon separated, as the image ships it (`sn;givenname;uid`) and as it joins a list.
     ldapAttributesForUserSearch: "sn;givenname;uid;univentionObjectIdentifier"
@@ -128,9 +155,25 @@ configuration:
   objectstore:
     auth:
       accessKey:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: "opendesk-s3-credentials"
+          key: "access-key-id"
+        {{- else }}
         value: {{ .Values.objectstores.nextcloud.username | quote }}
+        {{- end }}
       secretKey:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: "opendesk-s3-credentials"
+          key: "secret-access-key"
+        {{- else if .Values.objectstores.nextcloud.secretKey.value }}
         value: {{ .Values.objectstores.nextcloud.secretKey.value | quote }}
+        {{- else if or .Values.apps.minio.enabled .Values.apps.seaweedfs.enabled }}
+        value: {{ .Values.secrets.minio.nextcloudUser | quote }}
+        {{- else }}
+        {{- fail "No objectstorage secretKey for nextcloud found!" }}
+        {{- end }}
     bucket: {{ .Values.objectstores.nextcloud.bucket | quote }}
     {{- if .Values.objectstores.nextcloud.endpoint }}
     host: {{ printf "%s" .Values.objectstores.nextcloud.endpoint | quote }}
@@ -162,7 +205,13 @@ configuration:
       username:
         value: "opendesk_username"
       password:
+        {{- if .Values.externalSecrets.enabled }}
+        secret:
+          name: {{ .Values.externalSecrets.name | quote }}
+          key: "CENTRALNAVIGATION_API_KEY"
+        {{- else }}
         value: {{ .Values.secrets.centralnavigation.apiKey.value | quote }}
+        {{- end }}
     oxAppSuite:
       enabled: {{ .Values.apps.oxAppSuite.enabled }}
 
@@ -204,7 +253,13 @@ configuration:
 
   serverinfo:
     token:
+      {{- if .Values.externalSecrets.enabled }}
+      secret:
+        name: {{ .Values.externalSecrets.name | quote }}
+        key: "NEXTCLOUD_METRICS_TOKEN"
+      {{- else }}
       value: {{ .Values.secrets.nextcloud.metricsToken.value | quote }}
+      {{- end }}
 
   forbiddenChars: {{ join " " .Values.functional.filestore.naming.forbiddenChars | quote }}
 
