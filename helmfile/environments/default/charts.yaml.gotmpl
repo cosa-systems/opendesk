@@ -308,11 +308,15 @@ charts:
     # upstreamRepository: "nubus/charts/nubus"
     # upstreamMirrorTagFilterRegEx: '^(\d+)\.(\d+)\.(\d+)$'
     # upstreamMirrorStartFrom: ["0", "19", "3"]
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/univention/charts-mirror"
+    # cosa fork of nubus 1.21.0: repoints the bundled stack-data-ums at the cosa fork
+    # (0.103.3-cosa.1) that carries administratorPasswordSecret.create + the generalised
+    # contextUsers map (OX system user + ldapsearch binds under externalSecrets).
+    # Source: https://github.com/cosa-systems/nubus-stack/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "nubus"
-    version: "1.21.0"
-    verify: true
+    version: "1.21.0-cosa.1"
+    verify: false
   opendeskAlerts:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -402,10 +406,14 @@ charts:
     # upstreamMirrorStartFrom: ["2", "2", "37"]
     # upstreamRegistry: "https://registry.open-xchange.com"
     # upstreamRepository: "appsuite-public-sector/charts/appsuite-public-sector"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/open-xchange/charts-mirror"
+    # cosa fork: CE umbrella 2.33.66 re-vendored from the opencode.de mirror with the two
+    # permanent OX carries (core-mw existingEnvSecret suppresses secret-envvars; docconv +
+    # imageconv gate checksum/commonEnv). OX takes no external MRs.
+    # Source: https://github.com/cosa-systems/ox-appsuite-middleware/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "appsuite-public-sector"
-    version: "2.33.66"
+    version: "2.33.66-cosa.1"
     verify: false
   oxAppSuiteBootstrap:
     # providerCategory: "Platform"
@@ -484,20 +492,26 @@ charts:
     # providerResponsible: "Element"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-element/opendesk-synapse"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork on 6.2.2: existingSecret support for every consumed credential (B1 carry
+    # until openDesk moves to the upstream Element chart).
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.1"
+    verify: false
   synapseAdmin:
     # Enterprise Component
     # providerCategory: "Supplier"
     # providerResponsible: "Element"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork on 6.2.2: existingSecret support for every consumed credential (B1 carry
+    # until openDesk moves to the upstream Element chart).
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-admin"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.1"
+    verify: false
   synapseAdminbotWeb:
     # Enterprise Component
     # providerCategory: "Supplier"
@@ -512,20 +526,26 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-element/opendesk-synapse-create-account"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork on 6.2.2: existingSecret support for every consumed credential (B1 carry
+    # until openDesk moves to the upstream Element chart).
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-create-account"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.1"
+    verify: false
   synapseGroupsync:
     # Enterprise Component
     # providerCategory: "Supplier"
     # providerResponsible: "Element"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork on 6.2.2: existingSecret support for every consumed credential (B1 carry
+    # until openDesk moves to the upstream Element chart).
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-groupsync"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.1"
+    verify: false
   synapsePipe:
     # Enterprise Component
     # providerCategory: "Supplier"
