@@ -43,16 +43,25 @@ javaOptsSecrets:
 {{- end }}
 
 externalDB:
-  {{- if eq .Values.databases.xwiki.type "mariadb" }}
-  password: {{ .Values.secrets.mariadb.rootPassword.value | quote }}
-  {{- else }}
-  password: {{ .Values.databases.xwiki.password.value | quote }}
-  {{- end }}
+  ## The chart reads the database password from a Secret when
+  ## `externalDB.customKeyRef` is enabled, so it does not have to be inlined
+  ## here. `externalDB.password` is deliberately left unset: the chart renders
+  ## its own Secret from that value unconditionally, so passing it would keep
+  ## the password in the manifests even though nothing reads it any more.
+  ## Note the chart takes `name`/`key` flat under `customKeyRef` (see its
+  ## `xwiki.database.env` helper), not nested under a `password` key.
+  customKeyRef:
+    enabled: true
+    {{- if eq .Values.databases.xwiki.type "mariadb" }}
+    name: {{ .Values.secrets.mariadb.rootPassword.name | quote }}
+    key: {{ .Values.secrets.mariadb.rootPassword.key | quote }}
+    {{- else }}
+    name: {{ .Values.databases.xwiki.password.name | quote }}
+    key: {{ .Values.databases.xwiki.password.key | quote }}
+    {{- end }}
   database: {{ .Values.databases.xwiki.name | quote }}
   user: {{ .Values.databases.xwiki.username | quote }}
   host: {{ printf "%s:%d" .Values.databases.xwiki.host .Values.databases.xwiki.port | quote }}
-  customKeyRef:
-    enabled: false
 
 securityContext:
   enabled: true
