@@ -29,7 +29,13 @@ global:
     accessKeyId:
       value: {{ .Values.objectstores.notes.username | quote }}
     secretAccessKey:
-      value: {{ .Values.objectstores.notes.secretKey.value | quote }}
+      ## Read from the Secret the credential already names. `value` is left
+      ## unset on purpose: the backend renders every `value` into its own
+      ## Secret, so passing it would keep the key in the manifests even though
+      ## nothing reads it any more.
+      existingSecret:
+        name: {{ .Values.objectstores.notes.secretKey.name | quote }}
+        key: {{ .Values.objectstores.notes.secretKey.key | quote }}
 
 backend:
   image:
@@ -70,7 +76,13 @@ backend:
       host: {{ .Values.databases.notes.host | quote }}
       name: {{ .Values.databases.notes.name | quote }}
       password:
-        value: {{ .Values.databases.notes.password.value | quote }}
+        ## Flat `name`/`key` on purpose: the backend's Deployment and init Job
+        ## read `configuration.database.password.name` and `.key` directly,
+        ## while the chart's values.yaml documents a nested `existingSecret`
+        ## block that no template consumes. `value` is left unset for the same
+        ## reason as the object-store key above.
+        name: {{ .Values.databases.notes.password.name | quote }}
+        key: {{ .Values.databases.notes.password.key | quote }}
       port: {{ .Values.databases.notes.port | quote }}
       user:
         value: {{ .Values.databases.notes.username | quote }}
