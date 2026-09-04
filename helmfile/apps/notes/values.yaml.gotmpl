@@ -189,6 +189,14 @@ backend:
       mountPath: "/cert/cacert.pem"
       subPath: "ca-certificates.crt"
   {{- end }}
+  ## The chart's PDB defaults to `minAvailable: 1`, which at a single replica
+  ## leaves zero allowed disruptions and blocks every drain of the hosting node.
+  ## `maxUnavailable: 1` stays meaningful at any replica count and lets the pod
+  ## be evicted and rescheduled.
+  pdb:
+    minAvailable: null
+    maxUnavailable: 1
+
 
 frontend:
   image:
@@ -238,6 +246,14 @@ frontend:
     - name: "customization-volume"
       mountPath: "/usr/share/nginx/html/runtime-env.js"
       subPath: "runtime-env.js"
+  ## The chart's PDB defaults to `minAvailable: 1`, which at a single replica
+  ## leaves zero allowed disruptions and blocks every drain of the hosting node.
+  ## `maxUnavailable: 1` stays meaningful at any replica count and lets the pod
+  ## be evicted and rescheduled.
+  pdb:
+    minAvailable: null
+    maxUnavailable: 1
+
 
 y-provider:
   image:
@@ -303,4 +319,12 @@ y-provider:
   service:
     annotations:
       {{ .Values.annotations.notesYProvider.service | toYaml | nindent 6 }}
+  ## The chart's PDB defaults to `minAvailable: 1`, which at a single replica
+  ## leaves zero allowed disruptions and blocks every drain of the hosting node.
+  ## `maxUnavailable: 1` stays meaningful at any replica count and lets the pod
+  ## be evicted and rescheduled.
+  pdb:
+    minAvailable: null
+    maxUnavailable: 1
+
 ...
