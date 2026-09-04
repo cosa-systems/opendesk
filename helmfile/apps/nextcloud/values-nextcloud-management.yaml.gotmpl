@@ -118,7 +118,9 @@ configuration:
     host: {{ .Values.ldap.host | quote }}
     dn: "uid=ldapsearch_nextcloud,cn=users,{{ .Values.ldap.baseDn }}"
     password:
-      value: {{ .Values.secrets.nubus.ldapSearch.nextcloud.value | quote }}
+      secret:
+        name: {{ .Values.secrets.nubus.ldapSearch.nextcloud.name | quote }}
+        key: {{ .Values.secrets.nubus.ldapSearch.nextcloud.key | quote }}
     ldapLoginFilter: "(&(opendeskFileshareEnabled=TRUE)(univentionObjectIdentifier=%uid))"
     # Semicolon separated, as the image ships it (`sn;givenname;uid`) and as it joins a list.
     ldapAttributesForUserSearch: "sn;givenname;uid;univentionObjectIdentifier"
@@ -130,7 +132,9 @@ configuration:
       accessKey:
         value: {{ .Values.objectstores.nextcloud.username | quote }}
       secretKey:
-        value: {{ .Values.objectstores.nextcloud.secretKey.value | quote }}
+        secret:
+          name: {{ .Values.objectstores.nextcloud.secretKey.name | quote }}
+          key: {{ .Values.objectstores.nextcloud.secretKey.key | quote }}
     bucket: {{ .Values.objectstores.nextcloud.bucket | quote }}
     {{- if .Values.objectstores.nextcloud.endpoint }}
     host: {{ printf "%s" .Values.objectstores.nextcloud.endpoint | quote }}
@@ -162,7 +166,9 @@ configuration:
       username:
         value: "opendesk_username"
       password:
-        value: {{ .Values.secrets.centralnavigation.apiKey.value | quote }}
+        secret:
+          name: {{ .Values.secrets.centralnavigation.apiKey.name | quote }}
+          key: {{ .Values.secrets.centralnavigation.apiKey.key | quote }}
     oxAppSuite:
       enabled: {{ .Values.apps.oxAppSuite.enabled }}
 
@@ -204,7 +210,9 @@ configuration:
 
   serverinfo:
     token:
-      value: {{ .Values.secrets.nextcloud.metricsToken.value | quote }}
+      secret:
+        name: {{ .Values.secrets.nextcloud.metricsToken.name | quote }}
+        key: {{ .Values.secrets.nextcloud.metricsToken.key | quote }}
 
   forbiddenChars: {{ join " " .Values.functional.filestore.naming.forbiddenChars | quote }}
 
