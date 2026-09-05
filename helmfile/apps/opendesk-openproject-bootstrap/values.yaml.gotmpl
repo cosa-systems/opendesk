@@ -32,10 +32,14 @@ config:
       username:
         value: "nextcloud"
       password:
-        value: {{ .Values.secrets.nextcloud.adminPassword.value | quote }}
+        secret:
+          name: {{ .Values.secrets.nextcloud.adminPassword.name | quote }}
+          key: {{ .Values.secrets.nextcloud.adminPassword.key | quote }}
     status:
       password:
-        value: {{ .Values.secrets.nextcloud.statusPassword.value | quote }}
+        secret:
+          name: {{ .Values.secrets.nextcloud.statusPassword.name | quote }}
+          key: {{ .Values.secrets.nextcloud.statusPassword.key | quote }}
 
 containerSecurityContext:
   allowPrivilegeEscalation: false
