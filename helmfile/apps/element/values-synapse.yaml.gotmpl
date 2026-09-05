@@ -164,7 +164,9 @@ configuration:
         - "opendesk-matrix-scope"
 
     turn:
-      sharedSecret: {{ .Values.turn.credentials | quote }}
+      sharedSecretExistingSecret:
+        name: {{ .Values.turn.credentials.name | quote }}
+        key: {{ .Values.turn.credentials.key | quote }}
       servers:
         {{- if .Values.turn.tls.host }}
         - server: {{ .Values.turn.tls.host | quote }}
