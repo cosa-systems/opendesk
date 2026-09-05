@@ -149,7 +149,14 @@ jitsi:
       TURN_HOST: {{ .Values.turn.server.host | quote }}
       TURN_PORT: {{ .Values.turn.server.port | quote }}
       TURN_TRANSPORT: {{ .Values.turn.transport | quote }}
-      TURN_CREDENTIALS: {{ .Values.turn.credentials | quote }}
+    # `extraEnvs` is rendered into prosody's ConfigMap, so the TURN shared secret is not put there.
+    # `extraSecrets` are explicit env entries, which take precedence over the ConfigMap's envFrom.
+    extraSecrets:
+      - name: "TURN_CREDENTIALS"
+        valueFrom:
+          secretKeyRef:
+            name: {{ .Values.turn.credentials.name | quote }}
+            key: {{ .Values.turn.credentials.key | quote }}
     resources:
       {{ .Values.resources.prosody | toYaml | nindent 6 }}
     securityContext:
