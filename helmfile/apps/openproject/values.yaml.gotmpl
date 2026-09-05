@@ -53,7 +53,6 @@ environment:
   # Ref.: https://www.openproject-edge.com/docs/installation-and-operations/configuration/#seeding-ldap-connections
   OPENPROJECT_SEED_LDAP_OPENDESK_HOST: {{ .Values.ldap.host | quote }}
   OPENPROJECT_SEED_LDAP_OPENDESK_PORT: "389"
-  OPENPROJECT_SEED_LDAP_OPENDESK_BINDPASSWORD: {{ .Values.secrets.nubus.ldapSearch.openproject.value | quote }}
   OPENPROJECT_SEED_LDAP_OPENDESK_SECURITY: "plain_ldap"
   OPENPROJECT_SEED_LDAP_OPENDESK_BINDUSER: "uid=ldapsearch_openproject,cn=users,{{ .Values.ldap.baseDn }}"
   OPENPROJECT_SEED_LDAP_OPENDESK_BASEDN: "{{ .Values.ldap.baseDn }}"
@@ -70,8 +69,6 @@ environment:
     "(&(objectClass=opendeskProjectmanagementGroup)(opendeskProjectmanagementEnabled=TRUE))"
   OPENPROJECT_SEED_LDAP_OPENDESK_GROUPFILTER_OPENDESK_SYNC__USERS: "true"
   OPENPROJECT_SEED_LDAP_OPENDESK_GROUPFILTER_OPENDESK_GROUP__ATTRIBUTE: "cn"
-  OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_USER: {{ .Values.secrets.openproject.apiAdminUsername.value | quote }}
-  OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_PASSWORD: {{ .Values.secrets.openproject.apiAdminPassword.value | quote }}
   OPENPROJECT_SOUVAP__NAVIGATION__URL: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}/univention/portal/navigation.json?base=https%3A//{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}"
   OPENPROJECT_SMTP__DOMAIN: {{ .Values.global.mailDomain | default .Values.global.domain | quote }}
   OPENPROJECT_SMTP__USER__NAME: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
@@ -292,6 +289,21 @@ extraEnvVars:
       secretKeyRef:
         name: {{ .Values.secrets.keycloak.clientSecret.openproject.name | quote }}
         key: {{ .Values.secrets.keycloak.clientSecret.openproject.key | quote }}
+  - name: "OPENPROJECT_SEED_LDAP_OPENDESK_BINDPASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.secrets.nubus.ldapSearch.openproject.name | quote }}
+        key: {{ .Values.secrets.nubus.ldapSearch.openproject.key | quote }}
+  - name: "OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_USER"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.secrets.openproject.apiAdminUsername.name | quote }}
+        key: {{ .Values.secrets.openproject.apiAdminUsername.key | quote }}
+  - name: "OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_PASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.secrets.openproject.apiAdminPassword.name | quote }}
+        key: {{ .Values.secrets.openproject.apiAdminPassword.key | quote }}
 
 resources:
   {{ .Values.resources.openproject | toYaml | nindent 2 }}
