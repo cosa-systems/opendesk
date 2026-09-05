@@ -72,7 +72,6 @@ environment:
   OPENPROJECT_SEED_LDAP_OPENDESK_GROUPFILTER_OPENDESK_GROUP__ATTRIBUTE: "cn"
   OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_USER: {{ .Values.secrets.openproject.apiAdminUsername.value | quote }}
   OPENPROJECT_AUTHENTICATION_GLOBAL__BASIC__AUTH_PASSWORD: {{ .Values.secrets.openproject.apiAdminPassword.value | quote }}
-  OPENPROJECT_SOUVAP__NAVIGATION__SECRET: {{ .Values.secrets.centralnavigation.apiKey.value | quote }}
   OPENPROJECT_SOUVAP__NAVIGATION__URL: "https://{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}/univention/portal/navigation.json?base=https%3A//{{ .Values.global.hosts.nubus }}.{{ .Values.global.domain }}"
   OPENPROJECT_SMTP__DOMAIN: {{ .Values.global.mailDomain | default .Values.global.domain | quote }}
   OPENPROJECT_SMTP__USER__NAME: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
@@ -192,7 +191,10 @@ podAnnotations:
 postgresql:
   bundled: false
   auth:
-    password: {{ .Values.databases.openproject.password.value | quote }}
+    # Read from the managed Secret instead of being written into the chart's env Secrets.
+    existingSecret: {{ .Values.databases.openproject.password.name | quote }}
+    secretKeys:
+      userPasswordKey: {{ .Values.databases.openproject.password.key | quote }}
     username: {{ .Values.databases.openproject.username | quote }}
     database: {{ .Values.databases.openproject.name | quote }}
   connection:
@@ -236,7 +238,10 @@ openproject:
     identifier: "opendesk-openproject"
     provider: "keycloak"
     scope: "[openid,opendesk-openproject-scope]"
-    secret: {{ .Values.secrets.keycloak.clientSecret.openproject.value | quote }}
+    # Left empty on purpose: the chart's own `existingSecret` merely `lookup`s the value into its
+    # `-oidc` Secret (and finds nothing under `helmfile template`), so the client secret reaches the
+    # pods as OPENPROJECT_OPENID__CONNECT_KEYCLOAK_SECRET through `extraEnvVars` below instead.
+    secret: ""
     tokenEndpoint: "/realms/{{ .Values.platform.realm }}/protocol/openid-connect/token"
     userinfoEndpoint: "/realms/{{ .Values.platform.realm }}/protocol/openid-connect/userinfo"
     attribute_map:
@@ -274,6 +279,20 @@ backgroundReplicaCount: {{ .Values.replicas.openprojectWorker }}
 
 replicaCount: {{ .Values.replicas.openprojectWeb }}
 
+# Credentials read from their managed Secrets. An explicit `env` entry takes precedence over the same
+# variable from `envFrom`, so these are the values the pods see.
+extraEnvVars:
+  - name: "OPENPROJECT_SOUVAP__NAVIGATION__SECRET"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.secrets.centralnavigation.apiKey.name | quote }}
+        key: {{ .Values.secrets.centralnavigation.apiKey.key | quote }}
+  - name: "OPENPROJECT_OPENID__CONNECT_KEYCLOAK_SECRET"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.secrets.keycloak.clientSecret.openproject.name | quote }}
+        key: {{ .Values.secrets.keycloak.clientSecret.openproject.key | quote }}
+
 resources:
   {{ .Values.resources.openproject | toYaml | nindent 2 }}
 
@@ -298,8 +317,9 @@ s3:
   bucketName: {{ .Values.objectstores.openproject.bucket | quote }}
   useIamProfile: {{ .Values.objectstores.openproject.useIamProfile }}
   auth:
-    accessKeyId: {{ .Values.objectstores.openproject.username | quote }}
-    secretAccessKey: {{ .Values.objectstores.openproject.secretKey.value | quote }}
+    # The managed Secret carries the two OPENPROJECT_FOG_CREDENTIALS_* keys the chart loads via
+    # envFrom (see `extraData` on `objectstores.openproject.secretKey`), so nothing is inlined here.
+    existingSecret: {{ .Values.objectstores.openproject.secretKey.name | quote }}
 
 seederJob:
   annotations:
