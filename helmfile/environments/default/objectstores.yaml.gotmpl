@@ -95,6 +95,12 @@ objectstores:
       create: true
       name: "objectstore-openproject-secret-key"
       key: "secretKey"
+      # OpenProject loads this Secret via envFrom (s3.auth.existingSecret), which turns each data key
+      # into an env var - so it also needs the two FOG variable names (same values), as
+      # `secrets.postfix.opendeskSystemPassword` does for OPENPROJECT_SMTP__PASSWORD.
+      extraData:
+        OPENPROJECT_FOG_CREDENTIALS_AWS__ACCESS__KEY__ID: "openproject_user"
+        OPENPROJECT_FOG_CREDENTIALS_AWS__SECRET__ACCESS__KEY: {{ derivePassword 1 "long" $masterPassword "minio" "openproject_user" | sha1sum | quote }}
     username: "openproject_user"
     pathStyle: true
     useIamProfile: false
