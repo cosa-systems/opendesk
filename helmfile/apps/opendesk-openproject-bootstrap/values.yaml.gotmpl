@@ -24,9 +24,13 @@ config:
     fileshareName: "Nextcloud at {{ .Values.global.domain }}"
     admin:
       username:
-        value: {{ .Values.secrets.openproject.apiAdminUsername.value | quote }}
+        secret:
+          name: {{ .Values.secrets.openproject.apiAdminUsername.name | quote }}
+          key: {{ .Values.secrets.openproject.apiAdminUsername.key | quote }}
       password:
-        value: {{ .Values.secrets.openproject.apiAdminPassword.value | quote }}
+        secret:
+          name: {{ .Values.secrets.openproject.apiAdminPassword.name | quote }}
+          key: {{ .Values.secrets.openproject.apiAdminPassword.key | quote }}
   nextcloud:
     admin:
       username:
