@@ -9,7 +9,8 @@
 # reference that no consumer makes.
 #
 # The per-component `password.value` entries are empty by default: an empty entry means "the
-# bundled server's password", and every consumer falls back to `cache.redis.password.value` for it.
+# bundled server's password", and every consumer falls back to `cache.redis.password` for it -
+# to its `value`, or to its `name`/`key` where the chart takes a Secret reference.
 # Overriding only `cache.redis.password.value` therefore changes the password for the server and
 # for every component using it. Pointing a component at an external cache means overriding its
 # `host`/`port`/`username`/`tls` **and** its `password.value`; a non-empty component entry wins
@@ -46,7 +47,9 @@ cache:
     host: "redis-headless"
     port: 6379
     username: "default"
-    # Value-only: the Nextcloud charts inline the password into their configuration.
+    # Empty by default: the Nextcloud releases then read the bundled server's credential from its
+    # Secret (`cache.redis.password` name/key). A non-empty value here wins, as everywhere else, and
+    # is inlined into the chart configuration.
     password:
       value: ""
     tls: false

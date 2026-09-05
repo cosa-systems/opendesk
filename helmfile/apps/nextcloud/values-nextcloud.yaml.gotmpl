@@ -93,7 +93,13 @@ aio:
         username:
           value: {{ .Values.cache.nextcloud.username }}
         password:
-          value: {{ .Values.cache.nextcloud.password.value | default .Values.cache.redis.password.value | quote }}
+          {{- if .Values.cache.nextcloud.password.value }}
+          value: {{ .Values.cache.nextcloud.password.value | quote }}
+          {{- else }}
+          secret:
+            name: {{ .Values.cache.redis.password.name | quote }}
+            key: {{ .Values.cache.redis.password.key | quote }}
+          {{- end }}
       host: {{ .Values.cache.nextcloud.host | quote }}
       port: {{ .Values.cache.nextcloud.port | quote }}
       tls: {{ .Values.cache.nextcloud.tls }}
@@ -114,7 +120,9 @@ aio:
         username:
           value: {{ .Values.databases.nextcloud.username | quote }}
         password:
-          value: {{ .Values.databases.nextcloud.password.value | quote }}
+          secret:
+            name: {{ .Values.databases.nextcloud.password.name | quote }}
+            key: {{ .Values.databases.nextcloud.password.key | quote }}
     trustedProxy: {{ join " " .Values.cluster.networking.cidr | quote }}
     statusPhp:
       password:
