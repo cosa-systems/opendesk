@@ -139,9 +139,11 @@ hocuspocus:
   ingress:
     path: /hocuspocus
     pathType: "Prefix"
+  # The shared secret between OpenProject and the collaborative-editing backend. Without this the
+  # chart generates one at random on first install, as for `secretKeyBase` above.
   auth:
-    existingSecret:
-    secretKey: secret
+    existingSecret: {{ .Values.secrets.openproject.hocuspocusSecret.name | quote }}
+    secretKey: {{ .Values.secrets.openproject.hocuspocusSecret.key | quote }}
   networkPolicy:
     enabled: false
   image:
@@ -207,6 +209,11 @@ probes:
 
 openproject:
   extraEnvVarsSecret: {{ .Values.secrets.postfix.opendeskSystemPassword.name | quote }}
+  # Rails' SECRET_KEY_BASE. Without this the chart generates one at random on first install; taking it
+  # from the managed Secret keeps it derived from the master password and stable across renders.
+  secretKeyBase:
+    existingSecret: {{ .Values.secrets.openproject.secretKeyBase.name | quote }}
+    secretKey: {{ .Values.secrets.openproject.secretKeyBase.key | quote }}
   # seed will only be executed on initial installation
   seed_locale: "de"
   host: "{{ .Values.global.hosts.openproject }}.{{ .Values.global.domain }}"
