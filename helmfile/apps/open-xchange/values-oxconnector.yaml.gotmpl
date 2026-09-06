@@ -47,7 +47,10 @@ openXchange:
   oxLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
   auth:
     username: "admin"
-    password: {{ .Values.secrets.oxAppSuite.adminPassword.value | quote }}
+    existingSecret:
+      name: {{ .Values.secrets.oxAppSuite.adminPassword.name | quote }}
+      keyMapping:
+        password: {{ .Values.secrets.oxAppSuite.adminPassword.key | quote }}
   oxSmtpServer: "smtp://127.0.0.1:587"
   oxSoapServer: {{ printf "http://%s.%s.svc.%s" "open-xchange-core-mw-admin" (.Values.apps.oxAppSuite.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
   oxSharedAccount: true
@@ -55,12 +58,15 @@ openXchange:
     userIdentifier: "univentionObjectIdentifier"
     groupIdentifier: "univentionObjectIdentifier"
     sharedAccountIdentifier: "univentionObjectIdentifier"
-  oxDbConnectionString: {{ printf "postgresql://%s:%s@%s:%v/%s"
-    (.Values.databases.oxConnector.username | urlquery | replace "+" "%20")
-    (.Values.databases.oxConnector.password.value | urlquery | replace "+" "%20")
-    .Values.databases.oxConnector.host
-    .Values.databases.oxConnector.port
-    .Values.databases.oxConnector.name | quote }}
+  # The whole connection string, password included, comes from the managed Secret: the chart renders
+  # `oxDbConnectionString` verbatim into its own `-db-connection-string` Secret, so passing it here
+  # would put the database password in the manifests. Needs ox-connector chart >= the release
+  # carrying univention/ox-connector#4.
+  database:
+    existingSecret:
+      name: {{ .Values.databases.oxConnector.connectionString.name | quote }}
+      keyMapping:
+        OX_CONNECTOR_DB: {{ .Values.databases.oxConnector.connectionString.key | quote }}
 
 provisioningApi:
   connection:
