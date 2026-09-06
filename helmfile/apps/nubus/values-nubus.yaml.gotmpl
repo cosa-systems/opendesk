@@ -422,6 +422,13 @@ nubusPortalFrontend:
     annotations:
       {{ .Values.annotations.nubusPortalFrontend.serviceAccount | toYaml | nindent 6 }}
     create: true
+  # Authenticates to the UDM REST API as "svc-portal-server". The chart points this at
+  # the Secret stack-data-ums renders for that context user; openDesk now delivers the
+  # password itself, so that Secret is no longer rendered and the reference follows it.
+  udm:
+    auth:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
   replicaCount: {{ .Values.replicas.umsPortalFrontend }}
   resources:
     {{ .Values.resources.umsPortalFrontend | toYaml | nindent 4 }}
@@ -601,6 +608,13 @@ nubusPortalConsumer:
     auth:
       username: "portal-consumer"
       password: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.value | quote }}
+  # Authenticates to the UDM REST API as "svc-portal-server". The chart points this at
+  # the Secret stack-data-ums renders for that context user; openDesk now delivers the
+  # password itself, so that Secret is no longer rendered and the reference follows it.
+  udm:
+    auth:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
   replicaCount: {{ .Values.replicas.umsPortalConsumer }}
   resources:
     {{ .Values.resources.umsPortalConsumer | toYaml | nindent 4 }}
@@ -770,6 +784,13 @@ nubusPortalServer:
       name: "ums-portal-server-minio-opendesk-credentials"
       accessKeyKey: "access-key-id"
       secretKeyKey: "secret-key-id"
+  # Authenticates to the UDM REST API as "svc-portal-server". The chart points this at
+  # the Secret stack-data-ums renders for that context user; openDesk now delivers the
+  # password itself, so that Secret is no longer rendered and the reference follows it.
+  udm:
+    auth:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
   replicaCount: {{ .Values.replicas.umsPortalServer }}
   resources:
     {{ .Values.resources.umsPortalServer | toYaml | nindent 4 }}
@@ -1462,6 +1483,11 @@ nubusStackDataUms:
         name: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.key | quote }}
+    svcPortalServer:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.key | quote }}
   templateContext:
     # Still set, and still the same value: the umbrella renders the password into
     # <release>-nubus-credentials from here (see `secrets.nubus.systemAccounts`).
