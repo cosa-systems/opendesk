@@ -1774,7 +1774,9 @@ nubusKeycloakBootstrap:
     auth:
       bindDn: {{ printf "uid=ldapsearch_keycloak,cn=users,%s" .Values.ldap.baseDn }}
       existingSecret:
-        name: "ums-keycloak-bootstrap-ldap-opendesk-credentials"
+        name: {{ .Values.secrets.nubus.ldapSearch.keycloak.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.keycloak.key | quote }}
   oidc:
     rp:
       umcServer:
@@ -1816,9 +1818,6 @@ extraSecrets:
   - name: "ums-keycloak-extensions-smtp-opendesk-credentials"
     stringData:
       umcKeycloakExtensionsSmtpPassword: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
-  - name: "ums-keycloak-bootstrap-ldap-opendesk-credentials"
-    stringData:
-      password: {{ .Values.secrets.nubus.ldapSearch.keycloak.value | quote }}
 {{- if .Values.apps.oxAppSuite.enabled }}
   - name: "ums-ox-connector-provisioning-api"
     stringData:
