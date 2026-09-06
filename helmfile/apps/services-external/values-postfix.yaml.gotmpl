@@ -91,7 +91,9 @@ postfix:
     baseDn: "{{ .Values.ldap.baseDn }}"
     bindDn: "uid=ldapsearch_postfix,cn=users,{{ .Values.ldap.baseDn }}"
     password:
-      value: {{ .Values.secrets.nubus.ldapSearch.postfix.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.postfix.name | quote }}
+        key: {{ .Values.secrets.nubus.ldapSearch.postfix.key | quote }}
   milterDefaultAction: "accept"
   smtpdMilters:
     {{- if .Values.apps.dkimpy.enabled }}
