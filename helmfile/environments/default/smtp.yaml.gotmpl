@@ -1,15 +1,25 @@
 # SPDX-FileCopyrightText: 2023 Bundesministerium des Innern und für Heimat, PG ZenDiS "Projektgruppe für Aufbau ZenDiS"
 # SPDX-License-Identifier: Apache-2.0
 ---
+{{- $relayPassword := env "SMTP_PASSWORD" | default "" }}
 smtp:
   host: ""
   port: 587
   username: ""
-  # Value-only: credentials for an external SMTP relay, seeded from the SMTP_PASSWORD environment
-  # variable. Takes `value` only and not the `create`/`name`/`key` structure - the Postfix charts
-  # inline the literal value into their own configuration.
+  # Password for an external SMTP relay, seeded from the SMTP_PASSWORD environment variable. Same
+  # value/create/name/key convention as the entries in secrets.yaml.gotmpl: delivered as the Secret
+  # `name`/`key`, which both Postfix releases read through the chart's
+  # `relayHost.authentication.password.existingSecret`.
+  #
+  # Provisioned only when SMTP_PASSWORD actually carries a relay password, so a deployment without an
+  # external relay gets no Secret it would never reference. With `name` empty the releases fall back
+  # to the inline `value`, which keeps a deployment that sets `value` in its own values working as
+  # before; to bring your own Secret, set `create: false` and name it here.
   password:
-    value: {{ env "SMTP_PASSWORD" | quote }}
+    value: {{ $relayPassword | quote }}
+    create: {{ if ne $relayPassword "" }}true{{ else }}false{{ end }}
+    name: {{ if ne $relayPassword "" }}"smtp-relay-password"{{ else }}""{{ end }}
+    key: "password"
   localpartNoReply: "no-reply"
   spamMilter:
     host: ""
