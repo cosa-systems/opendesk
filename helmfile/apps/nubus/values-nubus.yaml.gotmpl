@@ -16,12 +16,17 @@ global:
   ldap:
     baseDn: {{ .Values.ldap.baseDn | quote }}
     domainName: {{ .Values.global.domain | quote }}
-    # LDAP cn=admin password. This umbrella-global is the source for the shared
-    # "ums-ldap-server-admin" Secret that the UMS provisioning/UDM/UMC components read by name;
-    # it is not (yet) externalizable via existingSecret without re-pointing every consumer.
+    # Where everything that binds as cn=admin gets the password. Every UMS component
+    # resolves this one umbrella-global - the provisioning, UDM, UMC, license-import,
+    # stack-data-ums and portal releases all template their own `existingSecret` from it -
+    # so repointing it here is what moves them off the Secret the ldap-server subchart
+    # used to render.
     auth:
-      cnAdmin:
-        password: {{ .Values.secrets.nubus.ldapSecret.value | quote }}
+      admin:
+        existingSecret:
+          name: {{ .Values.secrets.nubus.ldapSecret.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.ldapSecret.key | quote }}
   nubusDeployment: true
   secrets:
     masterPassword: {{ .Values.secrets.nubus.masterpassword.value | quote }}
@@ -944,10 +949,13 @@ nubusLdapServer:
       repository: {{ .Values.images.nubusLdapServer.repository }}
       tag: {{ .Values.images.nubusLdapServer.tag }}
     auth:
-      # Inline (not existingSecret): the ldap-server subchart materialises the shared
-      # "ums-ldap-server-admin" Secret from this password, which the UMS components consume by
-      # name. Providing an existingSecret here stops that Secret from being created and breaks them.
-      password: {{ .Values.secrets.nubus.ldapSecret.value | quote }}
+      # Setting this stops the subchart rendering its own "ums-ldap-server-admin" Secret.
+      # That is what `global.ldap.auth.admin.existingSecret` above accounts for: every
+      # consumer follows the same Secret this server is configured from.
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSecret.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSecret.key | quote }}
     leaderElector:
       image:
         registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusLdapServerLeaderElector.registry | quote }}
