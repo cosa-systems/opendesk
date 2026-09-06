@@ -1451,7 +1451,21 @@ nubusStackDataUms:
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusStackDataUms.serviceAccount | toYaml | nindent 6 }}
+  {{- end }}
+  # Pointing a context user at an existing Secret makes the data loader read that
+  # password at Job runtime: a "prepare-context" init container merges it into
+  # context.yaml, the chart omits the matching `templateContext` key from the
+  # rendered <release>-context Secret and skips its own per-user Secret.
+  contextUsers:
+    administrator:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.key | quote }}
   templateContext:
+    # Still set, and still the same value: the umbrella renders the password into
+    # <release>-nubus-credentials from here (see `secrets.nubus.systemAccounts`).
+    # The data loader ignores it in favour of the Secret referenced above.
     initialPasswordAdministrator: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.value | quote }}
     additionalMailDomains: {{ .Values.global.additionalMailDomains | toYaml | nindent 6 }}
     apps: {{ .Values.apps | toYaml | nindent 6 }}
