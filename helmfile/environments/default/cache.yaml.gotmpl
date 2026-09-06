@@ -32,11 +32,11 @@ cache:
     # Username is currently being ignored by the Intercom Service Helm chart.
     # Ref.: https://forge.univention.org/bugzilla/show_bug.cgi?id=59490
     username: "default"
-    # Read as a Secret by the `flush_intercom_sessions` migration and as a literal by the Intercom
-    # Service chart, which has no `existingSecret` for it. The Secret below carries the *override*
-    # only: while `value` is empty, the migration mounts the server's `redis-password` Secret
-    # instead (see `opendesk-migrations-post/values.yaml.gotmpl`), so both stay a plain reflection
-    # of what this file states.
+    # Read from a Secret by both consumers: the Intercom Service release
+    # (`ics.redis.auth.existingSecret`) and the `flush_intercom_sessions` migration. The Secret
+    # below carries the *override* only: while `value` is empty, both point at the bundled
+    # server's `redis-password` Secret instead (see `opendesk-migrations-post/values.yaml.gotmpl`),
+    # so both stay a plain reflection of what this file states.
     password:
       value: ""
       create: true

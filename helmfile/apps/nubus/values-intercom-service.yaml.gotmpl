@@ -83,7 +83,18 @@ ics:
     port: {{ .Values.cache.intercomService.port }}
     auth:
       username: {{ .Values.cache.intercomService.username }}
-      password: {{ .Values.cache.intercomService.password.value | default .Values.cache.redis.password.value | quote }}
+      # Empty `value` means "the bundled server's password", which lives in the Secret
+      # `cache.redis.password` names; a non-empty one wins and brings its own Secret.
+      existingSecret:
+        {{- if .Values.cache.intercomService.password.value }}
+        name: {{ .Values.cache.intercomService.password.name | quote }}
+        keyMapping:
+          password: {{ .Values.cache.intercomService.password.key | quote }}
+        {{- else }}
+        name: {{ .Values.cache.redis.password.name | quote }}
+        keyMapping:
+          password: {{ .Values.cache.redis.password.key | quote }}
+        {{- end }}
     ssl:
       enabled: {{ .Values.cache.intercomService.tls }}
   openxchange:
