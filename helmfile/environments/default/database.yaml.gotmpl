@@ -117,19 +117,35 @@ databases:
     verifyServerCertificate: false
     enabledTLSProtocols: "TLSv1.2,TLSv1.3"
     nullCatalogMeansCurrent: true
+  {{- $oxConnectorHost := "postgresql" }}
+  {{- $oxConnectorPort := 5432 }}
+  {{- $oxConnectorName := "oxconnector" }}
+  {{- $oxConnectorUser := "oxconnector_user" }}
+  {{- $oxConnectorPassword := derivePassword 1 "long" $masterPassword "postgres" "oxconnector_user" | sha1sum }}
   oxConnector:
     type: "postgresql"
-    name: "oxconnector"
-    host: "postgresql"
-    port: 5432
-    username: "oxconnector_user"
-    # Value-only in effect: the OX Connector chart has no `existingSecret` for its database
-    # connection.
+    name: {{ $oxConnectorName | quote }}
+    host: {{ $oxConnectorHost | quote }}
+    port: {{ $oxConnectorPort }}
+    username: {{ $oxConnectorUser | quote }}
     password:
-      value: {{ derivePassword 1 "long" $masterPassword "postgres" "oxconnector_user" | sha1sum | quote }}
+      value: {{ $oxConnectorPassword | quote }}
       create: true
       name: "database-oxconnector-password"
       key: "password"
+    # The OX Connector chart takes the whole SQLAlchemy URL rather than host/user/password separately,
+    # and renders it verbatim into a Secret of its own - so here the URL itself is the credential.
+    # Delivered as `database-oxconnector-connection-string`, which the release hands to the chart's
+    # `openXchange.database.existingSecret`. Composed from the fields above so there is one source of
+    # truth; override `value` to point the connector at a different database.
+    connectionString:
+      value: {{ printf "postgresql://%s:%s@%s:%v/%s"
+        ($oxConnectorUser | urlquery | replace "+" "%20")
+        ($oxConnectorPassword | urlquery | replace "+" "%20")
+        $oxConnectorHost $oxConnectorPort $oxConnectorName | quote }}
+      create: true
+      name: "database-oxconnector-connection-string"
+      key: "OX_CONNECTOR_DB"
     connectionLimit: ~
   synapse:
     type: "postgresql"
