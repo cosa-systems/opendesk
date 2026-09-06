@@ -1803,15 +1803,9 @@ nubusKeycloakBootstrap:
 
 # Credential secrets for accessing customer supplied services
 extraSecrets:
-  - name: "ums-opendesk-guardian-client-secret"
-    stringData:
-      managementApiClientSecret: {{ .Values.secrets.keycloak.clientSecret.guardian.value | quote }}
   - name: "ums-keycloak-postgresql-opendesk-credentials"
     stringData:
       keycloakDatabasePassword: {{ .Values.databases.keycloak.password.value | quote }}
-  - name: "ums-guardian-postgresql-opendesk-credentials"
-    stringData:
-      guardianDatabasePassword: {{ .Values.databases.umsGuardianManagementApi.password.value | quote }}
   - name: "ums-keycloak-extensions-postgresql-opendesk-credentials"
     stringData:
       umcKeycloakExtensionsDatabasePassword: {{ .Values.databases.keycloakExtension.password.value | quote }}
