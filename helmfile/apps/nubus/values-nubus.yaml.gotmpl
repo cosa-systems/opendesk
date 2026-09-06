@@ -1489,10 +1489,6 @@ nubusStackDataUms:
         keyMapping:
           password: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.key | quote }}
   templateContext:
-    # Still set, and still the same value: the umbrella renders the password into
-    # <release>-nubus-credentials from here (see `secrets.nubus.systemAccounts`).
-    # The data loader ignores it in favour of the Secret referenced above.
-    initialPasswordAdministrator: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.value | quote }}
     additionalMailDomains: {{ .Values.global.additionalMailDomains | toYaml | nindent 6 }}
     apps: {{ .Values.apps | toYaml | nindent 6 }}
     defaultGroupOtherObjects: "cn=Domain Users,cn=groups,{{ .Values.ldap.baseDn }}"
@@ -1836,6 +1832,14 @@ nubusKeycloakBootstrap:
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusKeycloakBootstrapNubus.serviceAccount | toYaml | nindent 6 }}
+
+# The umbrella mirrors the initial Administrator password into
+# <release>-nubus-credentials for operator convenience; nothing reads it. openDesk
+# delivers that password in `nubus-administrator-password` (see
+# `secrets.nubus.systemAccounts`), which the data loader reads directly, so the
+# mirror would only add a second copy of the credential to the manifests.
+nubusCredentialsSecret:
+  create: false
 
 # Credential secrets for accessing customer supplied services
 extraSecrets:

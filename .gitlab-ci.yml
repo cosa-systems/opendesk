@@ -762,8 +762,8 @@ fetch-administrator-credentials:
       echo "DEFAULT_ADMINISTRATOR_PASSWORD=$(
        kubectl \
          -n ${NAMESPACE} \
-         get secret ums-nubus-credentials \
-         -o jsonpath='{.data.administrator_password}' | base64 -d \
+         get secret nubus-administrator-password \
+         -o jsonpath='{.data.password}' | base64 -d \
       )" >> .env
   artifacts:
     reports:
