@@ -75,7 +75,10 @@ provisioningApi:
     enabled: false
     auth:
       username: "admin"
-      password: {{ .Values.secrets.nubus.provisioning.api.adminPassword.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.provisioning.api.adminPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.provisioning.api.adminPassword.key | quote }}
 
 resources:
   {{ .Values.resources.oxConnector | toYaml | nindent 2 }}
