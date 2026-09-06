@@ -1012,18 +1012,30 @@ nubusProvisioning:
       {{- end }}
     auth:
       admin:
-        password: {{ .Values.secrets.nubus.provisioning.api.adminPassword.value | quote }}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.adminPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.api.adminPassword.key | quote }}
       prefill:
-        password: {{ .Values.secrets.nubus.provisioning.api.prefillPassword.value | quote}}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.prefillPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.api.prefillPassword.key | quote }}
       eventsUdm:
-        password: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword.value | quote}}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.api.udmTransformerPassword.key | quote }}
     image:
       registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusProvisioningApi.registry | quote }}
       repository: {{ .Values.images.nubusProvisioningApi.repository }}
       tag: {{ .Values.images.nubusProvisioningApi.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.api.natsPassword.value | quote}}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.api.natsPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.api.natsPassword.key | quote }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-api"
       {{- with .Values.annotations.nubusProvisioning.apiPod }}
@@ -1058,7 +1070,10 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningDispatcher.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.value | quote}}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.key | quote }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-dispatcher"
       {{- with .Values.annotations.nubusProvisioning.dispatcherPod }}
@@ -1074,10 +1089,48 @@ nubusProvisioning:
     config:
       cluster:
         replicas: {{ .Values.replicas.umsProvisioningNats }}
+      # The NATS server builds its auth config from one Secret per account, and each entry
+      # here has to name the same Secret the account's own component was given above -
+      # otherwise the server keeps mounting the per-component Secret the chart no longer
+      # renders. `udmListener` is declared by the nubus umbrella rather than the
+      # provisioning chart, but works the same way.
       createUsers:
         adminUser:
           auth:
-            password: {{ .Values.secrets.nats.natsAdminPassword.value | quote }}
+            existingSecret:
+              name: {{ .Values.secrets.nats.natsAdminPassword.name | quote }}
+              keyMapping:
+                password: {{ .Values.secrets.nats.natsAdminPassword.key | quote }}
+        provisioningApi:
+          auth:
+            existingSecret:
+              name: {{ .Values.secrets.nubus.provisioning.api.natsPassword.name | quote }}
+              keyMapping:
+                password: {{ .Values.secrets.nubus.provisioning.api.natsPassword.key | quote }}
+        dispatcher:
+          auth:
+            existingSecret:
+              name: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.name | quote }}
+              keyMapping:
+                password: {{ .Values.secrets.nubus.provisioning.dispatcherNatsPassword.key | quote }}
+        prefill:
+          auth:
+            existingSecret:
+              name: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.name | quote }}
+              keyMapping:
+                password: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.key | quote }}
+        udmTransformer:
+          auth:
+            existingSecret:
+              name: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.name | quote }}
+              keyMapping:
+                password: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.key | quote }}
+        udmListener:
+          auth:
+            existingSecret:
+              name: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.name | quote }}
+              keyMapping:
+                password: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.key | quote }}
     containerSecurityContext:
       privileged: false
       allowPrivilegeEscalation: false
@@ -1137,7 +1190,10 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningPrefill.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.value | quote}}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.prefillNatsPassword.key | quote }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-prefill"
       {{- with .Values.annotations.nubusProvisioning.prefillPod }}
@@ -1156,7 +1212,10 @@ nubusProvisioning:
       tag: {{ .Values.images.nubusProvisioningUdmTransformer.tag }}
     nats:
       auth:
-        password: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.value | quote}}
+        existingSecret:
+          name: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.nubus.provisioning.udmTransformerNatsPassword.key | quote }}
     podAnnotations:
       intents.otterize.com/service-name: "ums-provisioning-udm-transformer"
       {{- with .Values.annotations.nubusProvisioning.udmTransformerPod }}
@@ -1245,7 +1304,10 @@ nubusUdmListener:
     {{ .Values.resources.umsUdmListener | toYaml | nindent 4 }}
   nats:
     auth:
-      password: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.value | quote}}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.provisioning.udmListenerNatsPassword.key | quote }}
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusUdmListener.serviceAccount | toYaml | nindent 6 }}
@@ -1281,7 +1343,7 @@ nubusSelfServiceConsumer:
     {{- end }}
   provisioningApi:
     auth:
-      password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.value | quote}}
+      password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.value | quote }}
   resources:
     {{ .Values.resources.umsSelfserviceConsumer | toYaml | nindent 4 }}
   replicaCount: {{ .Values.replicas.umsSelfserviceConsumer }}
