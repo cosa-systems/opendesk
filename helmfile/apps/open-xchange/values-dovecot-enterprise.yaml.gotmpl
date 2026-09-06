@@ -50,7 +50,9 @@ dovecot:
         value: {{ .Values.databases.dovecotACL.password.value | quote }}
       keyspace: {{ .Values.databases.dovecotACL.name | quote }}
       masterPassword:
-        value: {{ .Values.secrets.dovecot.sharedMailboxesMasterPassword.value | quote }}
+        existingSecret:
+          name: {{ .Values.secrets.dovecot.sharedMailboxesMasterPassword.name | quote }}
+          key: {{ .Values.secrets.dovecot.sharedMailboxesMasterPassword.key | quote }}
     objectStorage:
       bucket: {{ .Values.objectstores.dovecot.bucket | quote }}
       cacheTmpfs: {{ if .Values.technical.dovecot.objectStorage.cacheTmpfs }}true{{ else }}false{{ end }}
