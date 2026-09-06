@@ -1777,10 +1777,6 @@ nubusKeycloakBootstrap:
         name: {{ .Values.secrets.nubus.ldapSearch.keycloak.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.ldapSearch.keycloak.key | quote }}
-  oidc:
-    rp:
-      umcServer:
-        password: {{ .Values.secrets.keycloak.clientSecret.portal.value | quote }}
   podAnnotations:
     intents.otterize.com/service-name: "ums-keycloak-bootstrap"
     {{- with .Values.annotations.nubusKeycloakBootstrapNubus.pod }}
