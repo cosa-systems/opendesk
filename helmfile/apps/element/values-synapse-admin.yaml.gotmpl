@@ -10,12 +10,16 @@ global:
 
 configuration:
   adminBot:
-    backupPhrase: {{ .Values.secrets.matrixAdminBot.backupPassphrase.value | quote }}
+    backupPhraseExistingSecret:
+      name: {{ .Values.secrets.matrixAdminBot.backupPassphrase.name | quote }}
+      key: {{ .Values.secrets.matrixAdminBot.backupPassphrase.key | quote }}
     #name: "adminbot"
     #secretName: "matrix-adminbot-account"
     #secretKey: "access_token"
   auditBot:
-    backupPhrase: {{ .Values.secrets.matrixAuditBot.backupPassphrase.value | quote }}
+    backupPhraseExistingSecret:
+      name: {{ .Values.secrets.matrixAuditBot.backupPassphrase.name | quote }}
+      key: {{ .Values.secrets.matrixAuditBot.backupPassphrase.key | quote }}
     #name: "auditbot"
   database:
     host: {{ .Values.databases.synapse.host | quote }}
@@ -23,7 +27,9 @@ configuration:
     name: {{ .Values.databases.synapse.name | quote }}
     user: {{ .Values.databases.synapse.username | quote }}
     password:
-      value: {{ .Values.databases.synapse.password.value | quote }}
+      existingSecret:
+        name: {{ .Values.databases.synapse.password.name | quote }}
+        key: {{ .Values.databases.synapse.password.key | quote }}
     requireAuth: {{ .Values.databases.synapse.requireAuth }}
     channelBinding: {{ .Values.databases.synapse.channelBinding | quote }}
     connectTimeout: {{ .Values.databases.synapse.connectTimeout }}
@@ -47,7 +53,9 @@ configuration:
   ldap:
     base: {{ .Values.ldap.baseDn | quote }}
     bind_dn: "uid=ldapsearch_element,cn=users,{{ .Values.ldap.baseDn }}"
-    bind_password: {{ .Values.secrets.nubus.ldapSearch.element.value | quote }}
+    bindPasswordExistingSecret:
+      name: {{ .Values.secrets.nubus.ldapSearch.element.name | quote }}
+      key: {{ .Values.secrets.nubus.ldapSearch.element.key | quote }}
     filter: "(memberOf=cn=managed-by-attribute-LivecollaborationAdmin,cn=groups,{{ .Values.ldap.baseDn }})"
     uri: {{ printf "ldap://%s:389" .Values.ldap.host | quote }}
 cron:

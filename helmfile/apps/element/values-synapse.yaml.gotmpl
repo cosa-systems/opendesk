@@ -40,7 +40,9 @@ configuration:
     name: {{ .Values.databases.synapse.name | quote }}
     user: {{ .Values.databases.synapse.username | quote }}
     password:
-      value: {{ .Values.databases.synapse.password.value | quote }}
+      existingSecret:
+        name: {{ .Values.databases.synapse.password.name | quote }}
+        key: {{ .Values.databases.synapse.password.key | quote }}
     requireAuth: {{ .Values.databases.synapse.requireAuth }}
     channelBinding: {{ .Values.databases.synapse.channelBinding | quote }}
     connectTimeout: {{ .Values.databases.synapse.connectTimeout }}
@@ -61,8 +63,10 @@ configuration:
     serverName: {{ .Values.global.matrixDomain | default .Values.global.domain }}
     defaultRoomVersion: 12
     appServiceConfigs:
-      - as_token: {{ .Values.secrets.intercom.synapseAsToken.value | quote }}
-        hs_token: {{ .Values.secrets.intercom.synapseAsToken.value | quote }}
+      - tokenExistingSecret:
+          name: {{ .Values.secrets.intercom.synapseAsToken.name | quote }}
+          asTokenKey: {{ .Values.secrets.intercom.synapseAsToken.key | quote }}
+          hsTokenKey: {{ .Values.secrets.intercom.synapseAsToken.key | quote }}
         id: intercom-service
         namespaces:
           users:
@@ -70,8 +74,10 @@ configuration:
               regex: "@.*"
         url: null
         sender_localpart: intercom-service
-      - as_token: {{ .Values.secrets.oxAppSuite.synapseAsToken.value | quote }}
-        hs_token: {{ .Values.secrets.oxAppSuite.synapseAsToken.value | quote }}
+      - tokenExistingSecret:
+          name: {{ .Values.secrets.oxAppSuite.synapseAsToken.name | quote }}
+          asTokenKey: {{ .Values.secrets.oxAppSuite.synapseAsToken.key | quote }}
+          hsTokenKey: {{ .Values.secrets.oxAppSuite.synapseAsToken.key | quote }}
         id: ox-appsuite
         namespaces:
           users:
@@ -85,8 +91,10 @@ configuration:
       {{- end }}
     {{- if eq (env "OPENDESK_ENTERPRISE") "true" }}
       {{- if .Values.apps.elementAdmin.enabled }}
-      - as_token: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
-        hs_token: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
+      - tokenExistingSecret:
+          name: {{ .Values.secrets.matrixAdminBot.synapseAsToken.name | quote }}
+          asTokenKey: {{ .Values.secrets.matrixAdminBot.synapseAsToken.key | quote }}
+          hsTokenKey: {{ .Values.secrets.matrixAdminBot.synapseAsToken.key | quote }}
         id: "element-adminbot-pipe"
         namespaces:
           rooms:
@@ -102,8 +110,10 @@ configuration:
         url: "http://opendesk-synapse-adminbot-pipe:9995"
         rate_limited: false
         sender_localpart: "adminbot-sendernotinuse"
-      - as_token: {{ .Values.secrets.matrixAuditBot.synapseAsToken.value | quote }}
-        hs_token: {{ .Values.secrets.matrixAuditBot.synapseAsToken.value | quote }}
+      - tokenExistingSecret:
+          name: {{ .Values.secrets.matrixAuditBot.synapseAsToken.name | quote }}
+          asTokenKey: {{ .Values.secrets.matrixAuditBot.synapseAsToken.key | quote }}
+          hsTokenKey: {{ .Values.secrets.matrixAuditBot.synapseAsToken.key | quote }}
         id: "element-auditbot-pipe"
         namespaces:
           rooms:
@@ -121,8 +131,10 @@ configuration:
         sender_localpart: "auditbot-sendernotinuse"
       {{- end }}
       {{- if .Values.apps.elementGroupsync.enabled }}
-      - as_token: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
-        hs_token: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
+      - tokenExistingSecret:
+          name: {{ .Values.secrets.matrixGroupsync.synapseAsToken.name | quote }}
+          asTokenKey: {{ .Values.secrets.matrixGroupsync.synapseAsToken.key | quote }}
+          hsTokenKey: {{ .Values.secrets.matrixGroupsync.synapseAsToken.key | quote }}
         id: "gps"
         namespaces:
           rooms:
@@ -135,7 +147,9 @@ configuration:
         rate_limited: false
         sender_localpart: "groupsyncbot"
       {{- end }}
-    registrationSharedSecret: {{ .Values.secrets.synapse.registrationSharedSecret.value | quote }}
+    registrationSharedSecretExistingSecret:
+      name: {{ .Values.secrets.synapse.registrationSharedSecret.name | quote }}
+      key: {{ .Values.secrets.synapse.registrationSharedSecret.key | quote }}
     {{- end }}
 
     presence:
@@ -151,11 +165,15 @@ configuration:
       tls: false
       starttls: false
       username: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
-      password: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
+      passwordExistingSecret:
+        name: {{ .Values.secrets.postfix.opendeskSystemPassword.name | quote }}
+        key: {{ .Values.secrets.postfix.opendeskSystemPassword.key | quote }}
 
     oidc:
       clientId: "opendesk-matrix"
-      clientSecret: {{ .Values.secrets.keycloak.clientSecret.matrix.value | quote }}
+      clientSecretExistingSecret:
+        name: {{ .Values.secrets.keycloak.clientSecret.matrix.name | quote }}
+        key: {{ .Values.secrets.keycloak.clientSecret.matrix.key | quote }}
       issuer: "https://{{ .Values.global.hosts.keycloak }}.{{ .Values.global.domain }}/realms/{{ .Values.platform.realm }}"
       matrixIdLocalpart: {{ if .Values.functional.chat.matrix.profile.useImmutableIdentifierForLocalpart }}"opendesk_objectid"{{ else }}"opendesk_username"{{ end }}
       matrixIdSubject: "opendesk_objectid"

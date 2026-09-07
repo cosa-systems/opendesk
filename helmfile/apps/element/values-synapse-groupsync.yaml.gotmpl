@@ -9,21 +9,31 @@ global:
     {{ .Values.global.imagePullSecrets | toYaml | nindent 4 }}
 
 configuration:
-  asToken: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
+  asTokenExistingSecret:
+    name: {{ .Values.secrets.matrixGroupsync.synapseAsToken.name | quote }}
+    key: {{ .Values.secrets.matrixGroupsync.synapseAsToken.key | quote }}
   dryRun: false
-  hsToken: {{ .Values.secrets.matrixGroupsync.synapseAsToken.value | quote }}
+  # Same token for both ends of the appservice, as Synapse is given via
+  # appServiceConfigs[].tokenExistingSecret.
+  hsTokenExistingSecret:
+    name: {{ .Values.secrets.matrixGroupsync.synapseAsToken.name | quote }}
+    key: {{ .Values.secrets.matrixGroupsync.synapseAsToken.key | quote }}
   id: "gps"
   homeserverName: {{ .Values.global.matrixDomain | default .Values.global.domain | quote }}
-  registrationSharedSecret: {{ .Values.secrets.synapse.registrationSharedSecret.value | quote }}
+  registrationSharedSecretExistingSecret:
+    name: {{ .Values.secrets.synapse.registrationSharedSecret.name | quote }}
+    key: {{ .Values.secrets.synapse.registrationSharedSecret.key | quote }}
   runOnce: false
   username: "groupsyncbot"
+  ldapBindPasswordExistingSecret:
+    name: {{ .Values.secrets.nubus.ldapSearch.element.name | quote }}
+    key: {{ .Values.secrets.nubus.ldapSearch.element.key | quote }}
   ldap:
     attributes:
       name: "description"
       uid: "uid"
     base: {{ .Values.ldap.baseDn | quote }}
     bind_dn: "uid=ldapsearch_element,cn=users,{{ .Values.ldap.baseDn }}"
-    bind_password: {{ .Values.secrets.nubus.ldapSearch.element.value | quote }}
     check_interval_seconds: 60
     type: mapped-ldap
     uri: "ldap://ums-ldap-server:389"

@@ -19,10 +19,16 @@ configuration:
     enabled: true
     type: "admin"
     secretName: "matrix-adminbot-config"
-    asToken: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
-    hsToken: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}
+    asTokenExistingSecret:
+      name: {{ .Values.secrets.matrixAdminBot.synapseAsToken.name | quote }}
+      key: {{ .Values.secrets.matrixAdminBot.synapseAsToken.key | quote }}
+    hsTokenExistingSecret:
+      name: {{ .Values.secrets.matrixAdminBot.synapseAsToken.name | quote }}
+      key: {{ .Values.secrets.matrixAdminBot.synapseAsToken.key | quote }}
     serviceUrl: "http://opendesk-synapse-web:8008"
-    backupPassphrase: {{ .Values.secrets.matrixAdminBot.backupPassphrase.value | quote }}
+    backupPassphraseExistingSecret:
+      name: {{ .Values.secrets.matrixAdminBot.backupPassphrase.name | quote }}
+      key: {{ .Values.secrets.matrixAdminBot.backupPassphrase.key | quote }}
     homeserverName: {{ .Values.global.matrixDomain | default .Values.global.domain | quote }}
 image:
   registry: {{ coalesce .Values.repositories.image.dockerHub .Values.global.imageRegistry .Values.images.synapseCreateUser.registry | quote }}
