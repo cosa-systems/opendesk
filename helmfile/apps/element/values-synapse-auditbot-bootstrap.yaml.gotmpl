@@ -12,7 +12,9 @@ configuration:
   username: "auditbot"
   pod: "opendesk-synapse-0"
   secretName: "matrix-auditbot-account"
-  password: {{ .Values.secrets.matrixAuditBot.password.value | quote }}
+  passwordExistingSecret:
+    name: {{ .Values.secrets.matrixAuditBot.password.name | quote }}
+    key: {{ .Values.secrets.matrixAuditBot.password.key | quote }}
   pipeConfig:
     enabled: true
     type: "admin"
