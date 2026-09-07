@@ -86,7 +86,9 @@ podAnnotations:
 
 postgres:
   user: "postgres"
-  password: {{ .Values.secrets.postgresql.postgresUser.value | quote }}
+  existingSecret:
+    name: {{ .Values.secrets.postgresql.postgresUser.name | quote }}
+    key: {{ .Values.secrets.postgresql.postgresUser.key | quote }}
 
 resources:
   {{ .Values.resources.postgresql | toYaml | nindent 2 }}
