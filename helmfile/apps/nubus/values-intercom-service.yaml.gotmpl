@@ -69,7 +69,10 @@ ics:
     subdomain: {{ .Values.global.hosts.synapse | quote }}
     serverName: "{{ .Values.global.hosts.synapse }}.{{ .Values.global.domain }}"
     auth:
-      applicationServiceSecret: {{ .Values.secrets.intercom.synapseAsToken.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.intercom.synapseAsToken.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.intercom.synapseAsToken.key | quote }}
   nordeck:
     subdomain: {{ .Values.global.hosts.matrixNeoDateFixBot | quote }}
   portal:
