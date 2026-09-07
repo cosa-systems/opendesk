@@ -1484,6 +1484,12 @@ nubusStackDataUms:
         keyMapping:
           password: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.key | quote }}
     svcPortalServer:
+      # The derivation inputs the chart declares for this user. openDesk supplies the
+      # password from its own Secret, so these are only the record of how the value was
+      # generated before the takeover - see `secrets.nubus.systemAccounts`.
+      derivation:
+        username: "svc-portal-server"
+        site: "nubus"
       existingSecret:
         name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
         keyMapping:
