@@ -12,7 +12,9 @@ configuration:
   username: "adminbot"
   pod: "opendesk-synapse-0"
   secretName: "matrix-adminbot-account"
-  password: {{ .Values.secrets.matrixAdminBot.password.value | quote }}
+  passwordExistingSecret:
+    name: {{ .Values.secrets.matrixAdminBot.password.name | quote }}
+    key: {{ .Values.secrets.matrixAdminBot.password.key | quote }}
   pipeConfig:
     enabled: true
     type: "admin"

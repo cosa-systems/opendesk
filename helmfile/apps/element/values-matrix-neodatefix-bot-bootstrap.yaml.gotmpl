@@ -10,7 +10,9 @@ configuration:
   username: "meetings-bot"
   pod: "opendesk-synapse-0"
   secretName: "matrix-neodatefix-bot-account"
-  password: {{ .Values.secrets.matrixNeoDateFixBot.password.value | quote }}
+  passwordExistingSecret:
+    name: {{ .Values.secrets.matrixNeoDateFixBot.password.name | quote }}
+    key: {{ .Values.secrets.matrixNeoDateFixBot.password.key | quote }}
 
 global:
   imagePullSecrets:
