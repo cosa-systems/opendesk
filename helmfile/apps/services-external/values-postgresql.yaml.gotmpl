@@ -51,7 +51,13 @@ job:
 {{- $type := dig "type" "" $db }}
 {{- if or (eq $type "postgresql") (eq $type "psql") }}
     - username: {{ $db.username | quote }}
+      {{- if $db.password.name }}
+      existingSecret:
+        name: {{ $db.password.name | quote }}
+        key: {{ $db.password.key | quote }}
+      {{- else }}
       password: {{ $db.password.value | quote }}
+      {{- end }}
       connectionLimit: {{ $db.connectionLimit | default $.Values.databases.defaults.userConnectionLimit }}
 {{- end }}
 {{- end }}
