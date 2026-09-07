@@ -610,7 +610,10 @@ nubusPortalConsumer:
   provisioningApi:
     auth:
       username: "portal-consumer"
-      password: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.key | quote }}
   # Authenticates to the UDM REST API as "svc-portal-server". The chart points this at
   # the Secret stack-data-ums renders for that context user; openDesk now delivers the
   # password itself, so that Secret is no longer rendered and the reference follows it.
@@ -1274,8 +1277,20 @@ nubusProvisioning:
       {{- with .Values.annotations.nubusProvisioning.registerConsumersAdditional }}
       {{ . | toYaml | nindent 6 }}
       {{- end }}
-    {{- if .Values.apps.oxAppSuite.enabled }}
     createUsers:
+      # The umbrella already names the Secret each consumer's own chart renders, which is
+      # where the `registration` document lives. These add the password half: with the
+      # consumers reading their password from a managed Secret, it is no longer part of
+      # that document, so register-consumers merges it in from here.
+      portalConsumer:
+        passwordSecret:
+          name: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.name | quote }}
+          key: {{ .Values.secrets.nubus.portalConsumer.provisioningApiPassword.key | quote }}
+      selfserviceConsumer:
+        passwordSecret:
+          name: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.name | quote }}
+          key: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.key | quote }}
+      {{- if .Values.apps.oxAppSuite.enabled }}
       oxConsumer:
         existingSecret:
           name: "ums-ox-connector-provisioning-api"
@@ -1287,7 +1302,7 @@ nubusProvisioning:
         passwordSecret:
           name: {{ .Values.secrets.oxConnector.provisioningApiPassword.name | quote }}
           key: {{ .Values.secrets.oxConnector.provisioningApiPassword.key | quote }}
-    {{- end }}
+      {{- end }}
     image:
       registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusWaitForDependency.registry | quote }}
       repository: {{ .Values.images.nubusWaitForDependency.repository }}
@@ -1387,7 +1402,10 @@ nubusSelfServiceConsumer:
     {{- end }}
   provisioningApi:
     auth:
-      password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.selfserviceConsumer.provisioningApiPassword.key | quote }}
   resources:
     {{ .Values.resources.umsSelfserviceConsumer | toYaml | nindent 4 }}
   replicaCount: {{ .Values.replicas.umsSelfserviceConsumer }}
