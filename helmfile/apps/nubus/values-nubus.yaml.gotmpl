@@ -1264,6 +1264,12 @@ nubusProvisioning:
           name: "ums-ox-connector-provisioning-api"
           keyMapping:
             registration: "registration"
+        # The password stays in the Secret the OX Connector release reads, and
+        # register-consumers merges it into the document above at registration time -
+        # so the credential exists once, and `create: false` on the entry works.
+        passwordSecret:
+          name: {{ .Values.secrets.oxConnector.provisioningApiPassword.name | quote }}
+          key: {{ .Values.secrets.oxConnector.provisioningApiPassword.key | quote }}
     {{- end }}
     image:
       registry: {{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.nubusWaitForDependency.registry | quote }}
@@ -1876,8 +1882,7 @@ extraSecrets:
             {"realm": "udm", "topic": "oxmail/shared_account_permission"},
             {"realm": "udm", "topic": "oxmail/shared_account"}
           ],
-          "request_prefill": true,
-          "password": "{{ .Values.secrets.oxConnector.provisioningApiPassword.value }}"
+          "request_prefill": true
         }
 {{- end }}
 ...
