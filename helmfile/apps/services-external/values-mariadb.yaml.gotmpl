@@ -41,16 +41,22 @@ job:
   wait: 30
   users:
     - username: "openxchange_user"
-      password: {{ .Values.secrets.mariadb.openxchangeUser.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.mariadb.openxchangeUser.name | quote }}
+        key: {{ .Values.secrets.mariadb.openxchangeUser.key | quote }}
       connectionLimit: {{ .Values.databases.oxAppSuite.connectionLimit | default .Values.databases.defaults.userConnectionLimit }}
 {{ if or (eq .Values.databases.nextcloud.type "mariadb") (eq .Values.databases.nextcloud.type "mysql") }}
     - username: {{ .Values.databases.nextcloud.username | quote }}
-      password: {{ .Values.databases.nextcloud.password.value | quote}}
+      existingSecret:
+        name: {{ .Values.databases.nextcloud.password.name | quote }}
+        key: {{ .Values.databases.nextcloud.password.key | quote }}
       connectionLimit: {{ .Values.databases.nextcloud.connectionLimit | default .Values.databases.defaults.userConnectionLimit }}
 {{ end }}
 {{ if eq .Values.databases.xwiki.type "mariadb" }}
     - username: "xwiki_user"
-      password: {{ .Values.databases.xwiki.password.value | quote }}
+      existingSecret:
+        name: {{ .Values.databases.xwiki.password.name | quote }}
+        key: {{ .Values.databases.xwiki.password.key | quote }}
       connectionLimit: {{ .Values.databases.xwiki.connectionLimit | default .Values.databases.defaults.userConnectionLimit }}
 {{ end }}
   databases:
