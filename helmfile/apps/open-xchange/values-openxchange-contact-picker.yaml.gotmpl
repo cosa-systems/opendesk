@@ -17,6 +17,12 @@ appsuite:
       ENABLE_INTERNAL_USER_EDIT: "false"
 
     # Enterprise contact picker (see also gotmpl)
+    {{- if .Values.externalSecrets.enabled }}
+    # Chart-native: cluster-side Secret carries `ldap-client-config.yml` with
+    # the full structure including the LDAP bind password. Provisioned
+    # out-of-band.
+    existingYAMLFilesSecret: "opendesk-ox-existing-yaml-files"
+    {{- else }}
     secretYAMLFiles:
       ldap-client-config.yml:
         contactsLdapClient:
@@ -30,6 +36,7 @@ appsuite:
             adminDN:
               dn: "uid=ldapsearch_ox,cn=users,{{ .Values.ldap.baseDn }}"
               password: {{ .Values.secrets.nubus.ldapSearch.ox.value | quote }}
+    {{- end }}
 
     serviceAccount:
       annotations:
