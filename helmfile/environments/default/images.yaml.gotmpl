@@ -320,9 +320,11 @@ images:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/images/opendesk-migrations"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/images/opendesk-migrations"
-    tag: "1.10.0@sha256:27f1098022db644a17a8165563d4e1da1b13e398a00c12f76175e4d9c0c796fa"
+    # cosa fork: image 1.11.0 + opendesk-migrations image !14 (the access key ID from its secret
+    # file). Source: https://gitlab.opencode.de/bmi/opendesk/contributing/forks/lorbus-12687/opendesk-migrations-image
+    registry: "ghcr.io"
+    repository: "cosa-systems/opendesk-migrations"
+    tag: "1.11.0-cosa.1@sha256:bc3988a5348eaf9f25dcf10babdca8e7980f0fc34b29bbdafc4fc84c14db54a3"
   milter:
     # providerCategory: "Community"
     # providerResponsible: "openDesk"
