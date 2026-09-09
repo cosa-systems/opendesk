@@ -136,11 +136,13 @@ charts:
     # upstreamRepository: "nubus/charts/intercom-service"
     # upstreamMirrorTagFilterRegEx: '^(\d+)\.(\d+)\.(\d+)$'
     # upstreamMirrorStartFrom: ["2", "0", "1"]
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/univention/charts-mirror"
+    # cosa fork: univention/intercom-service#5 (Redis existingSecret guard).
+    # Source: https://github.com/cosa-systems/intercom-service/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "intercom-service"
-    version: "2.24.0"
-    verify: true
+    version: "2.24.0-cosa.1"
+    verify: false
   jitsi:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -156,11 +158,13 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-mariadb/mariadb"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-mariadb"
+    # cosa fork: opendesk-mariadb!8 (existingSecret for the bootstrap user passwords).
+    # Source: https://github.com/cosa-systems/opendesk-mariadb/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "mariadb"
-    version: "3.0.3"
-    verify: true
+    version: "3.0.3-cosa.1"
+    verify: false
   matrixNeoboardWidget:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -229,7 +233,7 @@ charts:
     registry: "registry.opencode.de"
     repository: "bmi/opendesk/components/platform-development/charts/opendesk-migrations"
     name: "opendesk-migrations"
-    version: "1.10.0"
+    version: "1.11.0"
     verify: true
   minio:
     # providerCategory: "Community"
@@ -246,31 +250,37 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-nextcloud/opendesk-nextcloud"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-nextcloud"
+    # cosa fork: opendesk-nextcloud!38 (render each credential Secret key independently).
+    # Source: https://github.com/cosa-systems/opendesk-nextcloud/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-nextcloud"
-    version: "4.10.6"
-    verify: true
+    version: "4.10.6-cosa.1"
+    verify: false
   nextcloudManagement:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-nextcloud/opendesk-nextcloud-management"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-nextcloud"
+    # cosa fork: opendesk-nextcloud!38.
+    # Source: https://github.com/cosa-systems/opendesk-nextcloud/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-nextcloud-management"
-    version: "4.10.6"
-    verify: true
+    version: "4.10.6-cosa.1"
+    verify: false
   nextcloudNotifyPush:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-nextcloud/opendesk-nextcloud-notifypush"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-nextcloud"
+    # cosa fork: opendesk-nextcloud!38.
+    # Source: https://github.com/cosa-systems/opendesk-nextcloud/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-nextcloud-notifypush"
-    version: "4.10.6"
-    verify: true
+    version: "4.10.6-cosa.1"
+    verify: false
   nginx:
     # providerCategory: "Community"
     # providerResponsible: "openDesk"
@@ -308,11 +318,13 @@ charts:
     # upstreamRepository: "nubus/charts/nubus"
     # upstreamMirrorTagFilterRegEx: '^(\d+)\.(\d+)\.(\d+)$'
     # upstreamMirrorStartFrom: ["0", "19", "3"]
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/univention/charts-mirror"
+    # cosa fork: univention/nubus-stack#11 (nubusCredentialsSecret.create) + the bundled stack-data-ums, provisioning, portal-consumer and selfservice-consumer repointed at their cosa forks.
+    # Source: https://github.com/cosa-systems/nubus-stack/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "nubus"
-    version: "1.21.0"
-    verify: true
+    version: "1.21.0-cosa.2"
+    verify: false
   opendeskAlerts:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -338,11 +350,13 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-keycloak-bootstrap/opendesk-keycloak-bootstrap"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-keycloak-bootstrap"
+    # cosa fork: opendesk-keycloak-bootstrap!19 (config.keycloak.admin.existingSecret).
+    # Source: https://github.com/cosa-systems/opendesk-keycloak-bootstrap/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-keycloak-bootstrap"
-    version: "2.9.0"
-    verify: true
+    version: "2.9.0-cosa.1"
+    verify: false
   opendeskSecrets:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -402,10 +416,12 @@ charts:
     # upstreamMirrorStartFrom: ["2", "2", "37"]
     # upstreamRegistry: "https://registry.open-xchange.com"
     # upstreamRepository: "appsuite-public-sector/charts/appsuite-public-sector"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/open-xchange/charts-mirror"
+    # cosa fork: CE umbrella re-vendored from the opencode.de mirror with the two permanent OX carries (core-mw existingEnvSecret suppresses secret-envvars; docconv/imageconv gate checksum/commonEnv). OX takes no external MRs.
+    # Source: https://github.com/cosa-systems/ox-appsuite-middleware/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "appsuite-public-sector"
-    version: "2.33.66"
+    version: "2.33.66-cosa.1"
     verify: false
   oxAppSuiteBootstrap:
     # providerCategory: "Platform"
@@ -424,11 +440,13 @@ charts:
     # upstreamRepository: "nubus/charts/ox-connector"
     # upstreamMirrorTagFilterRegEx: '^(\d+)\.(\d+)\.(\d+)$'
     # upstreamMirrorStartFrom: ["0", "4", "2"]
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/supplier/univention/charts-mirror"
+    # cosa fork: univention/ox-connector#4 (existingSecret for the DB connection URL).
+    # Source: https://github.com/cosa-systems/ox-connector/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "ox-connector"
-    version: "0.42.1"
-    verify: true
+    version: "0.42.1-cosa.1"
+    verify: false
   postfix:
     # providerCategory: "Platform"
     # providerResponsible: "openDesk"
@@ -444,11 +462,13 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-postgresql/postgresql"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-postgresql"
+    # cosa fork: opendesk-postgresql!5 (existingSecret for the superuser and bootstrap user passwords).
+    # Source: https://github.com/cosa-systems/opendesk-postgresql/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "postgresql"
-    version: "2.1.2"
-    verify: true
+    version: "2.1.2-cosa.1"
+    verify: false
   redis:
     # providerCategory: "Community"
     # providerResponsible: "openDesk"
@@ -484,20 +504,24 @@ charts:
     # providerResponsible: "Element"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-element/opendesk-synapse"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork: opendesk-element!25 (a Secret reference per Synapse-family credential).
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.2"
+    verify: false
   synapseAdmin:
     # Enterprise Component
     # providerCategory: "Supplier"
     # providerResponsible: "Element"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork: opendesk-element!25.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-admin"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.2"
+    verify: false
   synapseAdminbotWeb:
     # Enterprise Component
     # providerCategory: "Supplier"
@@ -512,20 +536,24 @@ charts:
     # providerResponsible: "openDesk"
     # upstreamRegistry: "https://registry.opencode.de"
     # upstreamRepository: "bmi/opendesk/components/platform-development/charts/opendesk-element/opendesk-synapse-create-account"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork: opendesk-element!25.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-create-account"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.2"
+    verify: false
   synapseGroupsync:
     # Enterprise Component
     # providerCategory: "Supplier"
     # providerResponsible: "Element"
-    registry: "registry.opencode.de"
-    repository: "bmi/opendesk/components/platform-development/charts/opendesk-element"
+    # cosa fork: opendesk-element!25.
+    # Source: https://github.com/cosa-systems/opendesk-element/tree/cosa-deploy
+    registry: "ghcr.io"
+    repository: "cosa-systems"
     name: "opendesk-synapse-groupsync"
-    version: "6.2.2"
-    verify: true
+    version: "6.2.2-cosa.2"
+    verify: false
   synapsePipe:
     # Enterprise Component
     # providerCategory: "Supplier"
