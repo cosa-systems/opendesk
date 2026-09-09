@@ -1503,6 +1503,67 @@ nubusStackDataUms:
   # context.yaml, the chart omits the matching `templateContext` key from the
   # rendered <release>-context Secret and skips its own per-user Secret.
   contextUsers:
+    # The per-app LDAP bind (search) accounts. Each entry projects the account's password
+    # from its Secret into the data-loader context under `contextKey`, and the data file in
+    # `stackDataUms.extraDataFiles` below creates the account from that context variable -
+    # so the accounts are created from the same Secrets their consumers bind with, and
+    # `create: false` on a `secrets.nubus.ldapSearch.*` entry works end to end. The OX
+    # system user is merge-only: it does not create an account, it makes the OX bind
+    # password available to the OX data-file extension under `oxSystemUserPassword`.
+    ldapsearchKeycloak:
+      contextKey: "ldapsearchKeycloakPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.keycloak.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.keycloak.key | quote }}
+    ldapsearchNextcloud:
+      contextKey: "ldapsearchNextcloudPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.nextcloud.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.nextcloud.key | quote }}
+    ldapsearchDovecot:
+      contextKey: "ldapsearchDovecotPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.dovecot.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.dovecot.key | quote }}
+    ldapsearchElement:
+      contextKey: "ldapsearchElementPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.element.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.element.key | quote }}
+    ldapsearchPostfix:
+      contextKey: "ldapsearchPostfixPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.postfix.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.postfix.key | quote }}
+    ldapsearchOpenproject:
+      contextKey: "ldapsearchOpenprojectPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.openproject.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.openproject.key | quote }}
+    ldapsearchXwiki:
+      contextKey: "ldapsearchXwikiPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.xwiki.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.xwiki.key | quote }}
+    ldapsearchOx:
+      contextKey: "ldapsearchOxPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.ox.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.ox.key | quote }}
+    oxSystemUser:
+      contextKey: "oxSystemUserPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.ox.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.ox.key | quote }}
     administrator:
       existingSecret:
         name: {{ .Values.secrets.nubus.systemAccounts.administratorPassword.name | quote }}
@@ -1519,6 +1580,97 @@ nubusStackDataUms:
         name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.key | quote }}
+  stackDataUms:
+    extraDataFiles:
+      # Creates the per-app LDAP bind (search) accounts from the passwords that `contextUsers`
+      # above projects into the data-loader context. `action: create` (not create_or_modify):
+      # the data-loader's create_or_modify path only handles users/user and groups/group, and
+      # these are users/ldap accounts like the readonly and OX system users. Keycloak comes
+      # first so that a later record can never block the login-critical account. The `password`
+      # lines are escaped for the three template engines the file passes through - helmfile
+      # gotmpl, the chart's `tpl`, and only then the data-loader's jinja, which resolves the
+      # projected context variable.
+      "89-opendesk-ldapsearch-users.yaml": |
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_keycloak"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchKeycloakPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_nextcloud"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchNextcloudPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_dovecot"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchDovecotPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_element"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchElementPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_postfix"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchPostfixPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_openproject"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchOpenprojectPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_xwiki"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchXwikiPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: create
+        module: users/ldap
+        position: cn=users,{{ .Values.ldap.baseDn }}
+        properties:
+          username: "ldapsearch_ox"
+          lastname: "LDAP-Search-User"
+          password: "{{ `{{ "{{ ldapsearchOxPassword }}" }}` }}"
+          overridePWHistory: true
+          overridePWLength: true
   templateContext:
     additionalMailDomains: {{ .Values.global.additionalMailDomains | toYaml | nindent 6 }}
     apps: {{ .Values.apps | toYaml | nindent 6 }}
@@ -1556,14 +1708,11 @@ nubusStackDataUms:
     oxDefaultContext: "1"
     oxDefaultLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
     oxContextHidden: true
-    oxSystemUserPassword: {{ .Values.secrets.nubus.ldapSearch.ox.value }}
+    # `oxSystemUserPassword` is projected from its Secret by `contextUsers.oxSystemUser` above.
     portalOxLinkBase: {{ printf "https://%s.%s" .Values.global.hosts.openxchange .Values.global.domain }}
-    ldapSearchUsers:
-      {{- range $username, $password := .Values.secrets.nubus.ldapSearch }}
-      - username: {{ printf "ldapsearch_%s" $username | quote }}
-        password: {{ $password.value | quote }}
-        lastname: "LDAP-Search-User"
-      {{- end }}
+    # The ldapsearch_* accounts are created by the `89-opendesk-ldapsearch-users.yaml` data file
+    # from the passwords `contextUsers` projects out of their Secrets, so nothing is inlined here.
+    ldapSearchUsers: []
     ldapSystemUsers: []
     portaltileGroupUserStandard:
       - "cn=Domain Users,cn=groups,{{ .Values.ldap.baseDn }}"
