@@ -79,6 +79,10 @@ configuration:
               regex: "@.*"
         url: null
         sender_localpart: ox-appsuite
+      {{- /* Deployment-defined application services, see "functional.chat.matrix.custom.extraAppServices". */}}
+      {{- range .Values.functional.chat.matrix.custom.extraAppServices }}
+      - {{ toYaml . | nindent 8 | trim }}
+      {{- end }}
     {{- if eq (env "OPENDESK_ENTERPRISE") "true" }}
       {{- if .Values.apps.elementAdmin.enabled }}
       - as_token: {{ .Values.secrets.matrixAdminBot.synapseAsToken.value | quote }}

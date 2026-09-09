@@ -185,6 +185,31 @@ functional:
         # If the LDAP entryUUID should be used for the localpart of user's Matrix IDs following setting must be `true`.
         useImmutableIdentifierForLocalpart: false
 
+      # Options to customize the Matrix homeserver beyond what openDesk configures itself.
+      custom:
+        # Additional application services to register with Synapse, next to the ones openDesk registers for
+        # its own components (intercom-service, OX App Suite and, with the enterprise apps, the bots). Each entry
+        # is a complete Synapse application service registration and is passed as-is to the opendesk-synapse
+        # chart option "configuration.homeserver.appServiceConfigs", so everything that chart supports for an
+        # entry can be used - see https://element-hq.github.io/synapse/latest/application_services.html for the
+        # registration format. The `id` and `sender_localpart` have to be unique across all registrations.
+        #
+        # Example (a bot that only ever sends, so no `url` for Synapse to push to):
+        # ```
+        # extraAppServices:
+        #   - id: "alertbot"
+        #     as_token: "<token>"
+        #     hs_token: "<token>"
+        #     sender_localpart: "alertbot"
+        #     namespaces:
+        #       users:
+        #         - exclusive: true
+        #           regex: "@alertbot:example.org"
+        #     url: null
+        #     rate_limited: false
+        # ```
+        extraAppServices: []
+
   dataProtection:
     matrixPresence:
       # Enable to allow information about the user presence status to be shared.
