@@ -16,6 +16,8 @@
 # `host`/`port`/`username`/`tls` **and** its `password.value`; a non-empty component entry wins
 # over the fallback in every consumer.
 
+{{- $redisPassword := derivePassword 1 "long" (env "MASTER_PASSWORD") "redis" "password" | sha1sum }}
+{{- $notesHost := "redis-headless" }}{{- $notesPort := 6379 }}{{- $notesUser := "default" }}{{- $notesPassword := "" }}{{- $notesTls := false }}
 cache:
   redis:
     # The password the bundled Redis is deployed with, referenced by `auth.existingSecret` in the Redis chart.
@@ -54,13 +56,22 @@ cache:
       value: ""
     tls: false
   notes:
-    host: "redis-headless"
-    port: 6379
-    username: "default"
-    # Value-only: the Notes chart takes a connection URL with the password inlined.
+    host: {{ $notesHost | quote }}
+    port: {{ $notesPort }}
+    username: {{ $notesUser | quote }}
+    # An empty value means the shared Redis password (`cache.redis.password`); the URL below
+    # applies the same fallback.
     password:
-      value: ""
-    tls: false
+      value: {{ $notesPassword | quote }}
+    tls: {{ $notesTls }}
+    # The connection URL the Notes backend takes as one string, password included. Composed from
+    # the fields above (the password falls back to the shared Redis one) so there is one source
+    # of truth; delivered as a Secret because the URL is the credential.
+    redisUrl:
+      value: {{ printf "redis%s://%s:%s@%s:%v/7" (ternary "s" "" $notesTls) $notesUser (default $redisPassword $notesPassword) $notesHost $notesPort | quote }}
+      create: true
+      name: "cache-notes-redis-url"
+      key: "url"
   openproject:
     host: "memcached"
     port: 11211
