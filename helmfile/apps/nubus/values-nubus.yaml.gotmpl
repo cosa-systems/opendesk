@@ -582,9 +582,14 @@ nubusPortalConsumer:
     logLevel: {{ if .Values.debug.enabled }}"DEBUG"{{ else }}"INFO"{{ end }}
   objectStorage:
     auth:
-      accessKeyId: {{ .Values.objectstores.nubus.username | quote }}
-      secretAccessKey: {{ .Values.objectstores.nubus.secretKey.value | quote }}
-      existingSecret: null
+      # Both credentials come from the objectstore's managed Secret: the secret key under
+      # `objectstores.nubus.secretKey.key`, the access key id under `access-key-id`, which
+      # objectstores.yaml.gotmpl adds to that Secret as extraData.
+      existingSecret:
+        name: {{ .Values.objectstores.nubus.secretKey.name | quote }}
+        keyMapping:
+          accessKeyId: "access-key-id"
+          secretAccessKey: {{ .Values.objectstores.nubus.secretKey.key | quote }}
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
     endpoint: {{ printf "https://%s" .Values.objectstores.nubus.endpoint | quote }}
@@ -730,9 +735,14 @@ nubusPortalServer:
       secretName: {{ .Values.ingress.tls.secretName | quote }}
   objectStorage:
     auth:
-      accessKeyId: {{ .Values.objectstores.nubus.username | quote }}
-      secretAccessKey: {{ .Values.objectstores.nubus.secretKey.value | quote }}
-      existingSecret: null
+      # Both credentials come from the objectstore's managed Secret: the secret key under
+      # `objectstores.nubus.secretKey.key`, the access key id under `access-key-id`, which
+      # objectstores.yaml.gotmpl adds to that Secret as extraData.
+      existingSecret:
+        name: {{ .Values.objectstores.nubus.secretKey.name | quote }}
+        keyMapping:
+          accessKeyId: "access-key-id"
+          secretAccessKey: {{ .Values.objectstores.nubus.secretKey.key | quote }}
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
     endpoint: {{ printf "https://%s" .Values.objectstores.nubus.endpoint | quote }}

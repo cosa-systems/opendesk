@@ -72,6 +72,7 @@ objectstores:
     username: "notes_user"
     port: 443
     actions: ["Admin", "Read", "Write", "List"]
+  {{- $nubusUser := "ums_user" }}
   nubus:
     bucket: "ums"
     endpoint: ""
@@ -81,7 +82,11 @@ objectstores:
       create: true
       name: "objectstore-nubus-secret-key"
       key: "secretKey"
-    username: "ums_user"
+      # The access key id travels in the same Secret, so the nubus portal-server and
+      # portal-consumer charts can read both credentials through one existingSecret.
+      extraData:
+        access-key-id: {{ $nubusUser | quote }}
+    username: {{ $nubusUser | quote }}
     port: 443
     actions: ["Admin", "Read", "Write", "List"]
   openproject:
