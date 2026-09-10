@@ -1568,6 +1568,11 @@ nubusStackDataUms:
         name: {{ .Values.secrets.nubus.ldapSearch.ox.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.ldapSearch.ox.key | quote }}
+    readonlyUser:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.readonlyUserPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.systemAccounts.readonlyUserPassword.key | quote }}
     oxSystemUser:
       contextKey: "oxSystemUserPassword"
       existingSecret:
@@ -1995,6 +2000,14 @@ nubusKeycloakBootstrap:
         name: {{ .Values.secrets.keycloak.adminPassword.name | quote }}
         keyMapping:
           adminPassword: {{ .Values.secrets.keycloak.adminPassword.key | quote }}
+  oidc:
+    relyingParty:
+      umcServer:
+        clientSecret:
+          existingSecret:
+            name: {{ .Values.secrets.keycloak.clientSecret.umcServer.name | quote }}
+            keyMapping:
+              password: {{ .Values.secrets.keycloak.clientSecret.umcServer.key | quote }}
   ldap:
     auth:
       bindDn: {{ printf "uid=ldapsearch_keycloak,cn=users,%s" .Values.ldap.baseDn }}
