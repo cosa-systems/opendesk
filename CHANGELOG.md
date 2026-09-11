@@ -1,3 +1,10 @@
+## [1.18.2](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/compare/v1.18.1...v1.18.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **nextcloud:** Update from v33.0.7 to v33.0.9 ([b07e56a](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/commit/b07e56a452778fa6e2595567e8123555ff2e0399))
+
 ## [1.18.1](https://gitlab.opencode.de/bmi/opendesk/deployment/opendesk/compare/v1.18.0...v1.18.1) (2026-09-02)
 
 
