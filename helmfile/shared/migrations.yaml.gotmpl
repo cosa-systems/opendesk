@@ -35,7 +35,8 @@ migrations:
   # (`objectstores.migrations`), and only actions that hand work over read any of this - a
   # deployment running none of them needs none of it, which is why an endpoint that cannot be
   # determined is left empty here rather than failing the templating. The action needing it fails
-  # and names it. The identity's secret key is mounted through `secretFiles`, not declared here.
+  # and names it. The identity's credentials are mounted through `secretFiles`, not declared here;
+  # `username` below is the fallback for images that do not read the access key ID from its file.
   objectStore:
     {{- if .Values.objectstores.migrations.endpoint }}
     endpoint: {{ .Values.objectstores.migrations.endpoint | quote }}
@@ -47,7 +48,7 @@ migrations:
     endpoint: ""
     {{- end }}
     bucket: {{ .Values.objectstores.migrations.bucket | quote }}
-    username: {{ .Values.objectstores.migrations.username | quote }}
+    username: {{ .Values.objectstores.migrations.username.value | quote }}
     region: {{ .Values.objectstores.migrations.region | quote }}
     port: {{ .Values.objectstores.migrations.port }}
     useSSL: {{ .Values.objectstores.migrations.useSSL }}

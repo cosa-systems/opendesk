@@ -351,7 +351,11 @@ s3:
   useIamProfile: {{ .Values.objectstores.openproject.useIamProfile }}
   auth:
     # The managed Secret carries the two OPENPROJECT_FOG_CREDENTIALS_* keys the chart loads via
-    # envFrom (see `extraData` on `objectstores.openproject.secretKey`), so nothing is inlined here.
+    # envFrom (see `extraData` on `objectstores.openproject.secretKey`), so nothing is inlined here;
+    # `objectstores.openproject.username` has to name that same Secret (it does by default).
+    {{- if ne .Values.objectstores.openproject.username.name .Values.objectstores.openproject.secretKey.name }}
+    {{- fail "objectstores.openproject.username and objectstores.openproject.secretKey must name the same Secret: OpenProject loads the pair from one Secret" }}
+    {{- end }}
     existingSecret: {{ .Values.objectstores.openproject.secretKey.name | quote }}
 
 seederJob:

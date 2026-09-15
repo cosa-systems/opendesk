@@ -76,7 +76,7 @@ dovecot:
       s3:
         awsRegion: {{ .Values.objectstores.dovecot.region | quote }}
       {{- end }}
-      username: {{ .Values.objectstores.dovecot.username | quote }}
+      username: {{ .Values.objectstores.dovecot.username.value | quote }}
       password:
         value: {{ .Values.objectstores.dovecot.secretKey.value | quote }}
 ...
