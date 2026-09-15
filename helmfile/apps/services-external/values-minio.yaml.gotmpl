@@ -231,44 +231,44 @@ provisioning:
             - "s3:*"
     {{- end }}
   users:
-    - username: {{ .Values.objectstores.migrations.username | quote }}
+    - username: {{ .Values.objectstores.migrations.username.value | quote }}
       password: {{ .Values.objectstores.migrations.secretKey.value | quote }}
       disabled: false
       policies:
         - "migrations-bucket-policy"
       setPolicies: true
-    - username: {{ .Values.objectstores.nextcloud.username | quote }}
+    - username: {{ .Values.objectstores.nextcloud.username.value | quote }}
       password: {{ .Values.objectstores.nextcloud.secretKey.value | quote }}
       disabled: false
       policies:
         - "nextcloud-bucket-policy"
       setPolicies: true
-    - username: {{ .Values.objectstores.notes.username | quote }}
+    - username: {{ .Values.objectstores.notes.username.value | quote }}
       password: {{ .Values.objectstores.notes.secretKey.value | quote }}
       disabled: false
       policies:
         - "notes-bucket-policy"
       setPolicies: true
-    - username: {{ .Values.objectstores.openproject.username | quote }}
+    - username: {{ .Values.objectstores.openproject.username.value | quote }}
       password: {{ .Values.objectstores.openproject.secretKey.value | quote }}
       disabled: false
       policies:
         - "openproject-bucket-policy"
       setPolicies: true
-    - username: {{ .Values.objectstores.openxchange.username | quote }}
+    - username: {{ .Values.objectstores.openxchange.username.value | quote }}
       password: {{ .Values.objectstores.openxchange.secretKey.value | quote }}
       disabled: false
       policies:
         - "openxchange-bucket-policy"
       setPolicies: true
-    - username: {{ .Values.objectstores.nubus.username | quote }}
+    - username: {{ .Values.objectstores.nubus.username.value | quote }}
       password: {{ .Values.objectstores.nubus.secretKey.value | quote }}
       disabled: false
       policies:
         - "ums-bucket-policy"
       setPolicies: true
     {{- if eq (env "OPENDESK_ENTERPRISE") "true" }}
-    - username: {{ .Values.objectstores.dovecot.username | quote }}
+    - username: {{ .Values.objectstores.dovecot.username.value | quote }}
       password: {{ .Values.objectstores.dovecot.secretKey.value | quote }}
       disabled: false
       policies:

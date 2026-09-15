@@ -36,6 +36,11 @@ migrations:
         name: {{ .Values.objectstores.migrations.secretKey.name | quote }}
         key: {{ .Values.objectstores.migrations.secretKey.key | quote }}
         optional: true
+    - name: "objectstore-migrations-access-key-id"
+      secret:
+        name: {{ .Values.objectstores.migrations.username.name | quote }}
+        key: {{ .Values.objectstores.migrations.username.key | quote }}
+        optional: true
   {{- end }}
   {{- if .Values.apps.nubus.enabled }}
     # The password `flush_intercom_sessions` authenticates with - the same fallback every consumer
