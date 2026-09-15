@@ -1504,6 +1504,11 @@ nubusStackDataUms:
         name: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.systemAccounts.svcPortalServerPassword.key | quote }}
+    readonlyUser:
+      existingSecret:
+        name: {{ .Values.secrets.nubus.systemAccounts.readonlyUserPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.systemAccounts.readonlyUserPassword.key | quote }}
   templateContext:
     # Still set, and still the same value: the umbrella renders the password into
     # <release>-nubus-credentials from here (see `secrets.nubus.systemAccounts`).
