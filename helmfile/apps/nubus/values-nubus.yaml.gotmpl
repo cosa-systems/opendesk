@@ -228,11 +228,10 @@ keycloak:
     auth:
       username: {{ .Values.databases.keycloak.username | quote }}
       database: {{ .Values.databases.keycloak.name | quote }}
-      # TODO: Pending secrets refactoring to be able to provide the value directly
       existingSecret:
-        name: "ums-keycloak-postgresql-opendesk-credentials"
+        name: {{ .Values.databases.keycloak.password.name | quote }}
         keyMapping:
-          password: keycloakDatabasePassword
+          password: {{ .Values.databases.keycloak.password.key | quote }}
   replicaCount: {{ .Values.replicas.keycloak }}
   resources:
     {{ .Values.resources.umsKeycloak | toYaml | nindent 4 }}
@@ -501,11 +500,10 @@ nubusKeycloakExtensions:
     auth:
       database: {{ .Values.databases.keycloakExtension.name | quote }}
       username: {{ .Values.databases.keycloakExtension.username | quote }}
-      # TODO: Pending secrets refactoring for this component chart
       existingSecret:
-        name: "ums-keycloak-extensions-postgresql-opendesk-credentials"
+        name: {{ .Values.databases.keycloakExtension.password.name | quote }}
         keyMapping:
-          password: "umcKeycloakExtensionsDatabasePassword"
+          password: {{ .Values.databases.keycloakExtension.password.key | quote }}
   smtp:
     connection:
       host: {{ printf "%s.%s.svc.%s" "postfix" (.Values.apps.postfix.namespace | default .Release.Namespace) .Values.cluster.networking.domain | quote }}
@@ -515,12 +513,10 @@ nubusKeycloakExtensions:
     auth:
       enabled: true
       username: {{ printf "%s@%s" "opendesk-system" ( .Values.global.mailDomain | default .Values.global.domain ) }}
-      # TODO: Pending secrets refactoring in the component chart
-      password: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
       existingSecret:
-        name: "ums-keycloak-extensions-smtp-opendesk-credentials"
+        name: {{ .Values.secrets.postfix.opendeskSystemPassword.name | quote }}
         keyMapping:
-          password: "umcKeycloakExtensionsSmtpPassword"
+          password: {{ .Values.secrets.postfix.opendeskSystemPassword.key | quote }}
   handler:
     additionalAnnotations:
       {{ .Values.annotations.nubusKeycloakExtensions.handlerAdditional | toYaml | nindent 6 }}
@@ -1622,12 +1618,10 @@ nubusUmcServer:
       auth:
         username: {{ .Values.databases.umsSelfservice.username | quote }}
         database: {{ .Values.databases.umsSelfservice.name | quote }}
-        password: {{ .Values.databases.umsSelfservice.password.value | quote }}
-        # NOTE: Nubus has still an existing secret configured for legacy reasons.
-        # This disables the existing secret and ensures that the value from above
-        # is used.
         existingSecret:
-          name: null
+          name: {{ .Values.databases.umsSelfservice.password.name | quote }}
+          keyMapping:
+            password: {{ .Values.databases.umsSelfservice.password.key | quote }}
     authSession:
       connection:
         host: {{ .Values.databases.umsAuthSession.host | quote }}
@@ -1635,12 +1629,10 @@ nubusUmcServer:
       auth:
         username: {{ .Values.databases.umsAuthSession.username | quote }}
         database: {{ .Values.databases.umsAuthSession.name | quote }}
-        password: {{ .Values.databases.umsAuthSession.password.value | quote }}
-        # NOTE: Nubus has still an existing secret configured for legacy reasons.
-        # This disables the existing secret and ensures that the value from above
-        # is used.
         existingSecret:
-          name: null
+          name: {{ .Values.databases.umsAuthSession.password.name | quote }}
+          keyMapping:
+            password: {{ .Values.databases.umsAuthSession.password.key | quote }}
   proxy:
     image:
       registry: {{ coalesce .Values.repositories.image.dockerHub .Values.global.imageRegistry .Values.images.nubusUmcServerProxy.registry | quote }}
@@ -1671,7 +1663,10 @@ nubusUmcServer:
       {{ .Values.annotations.nubusUmcServer.serviceAccount | toYaml | nindent 6 }}
   smtp:
     auth:
-      password: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
+      existingSecret:
+        name: {{ .Values.secrets.postfix.opendeskSystemPassword.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.postfix.opendeskSystemPassword.key | quote }}
 
 nubusUmcGateway:
   containerSecurityContext:
@@ -1806,18 +1801,9 @@ extraSecrets:
   - name: "ums-opendesk-guardian-client-secret"
     stringData:
       managementApiClientSecret: {{ .Values.secrets.keycloak.clientSecret.guardian.value | quote }}
-  - name: "ums-keycloak-postgresql-opendesk-credentials"
-    stringData:
-      keycloakDatabasePassword: {{ .Values.databases.keycloak.password.value | quote }}
   - name: "ums-guardian-postgresql-opendesk-credentials"
     stringData:
       guardianDatabasePassword: {{ .Values.databases.umsGuardianManagementApi.password.value | quote }}
-  - name: "ums-keycloak-extensions-postgresql-opendesk-credentials"
-    stringData:
-      umcKeycloakExtensionsDatabasePassword: {{ .Values.databases.keycloakExtension.password.value | quote }}
-  - name: "ums-keycloak-extensions-smtp-opendesk-credentials"
-    stringData:
-      umcKeycloakExtensionsSmtpPassword: {{ .Values.secrets.postfix.opendeskSystemPassword.value | quote }}
 {{- if .Values.apps.oxAppSuite.enabled }}
   - name: "ums-ox-connector-provisioning-api"
     stringData:
