@@ -10,9 +10,15 @@
 #                  scope tighter).
 #   secretKey      the identity's S3 secret access key, co-located here as an externalized secret
 #                  ({value, create, name, key}). opendesk-secrets (which scans this file) renders it
-#                  as the managed Secret `name` for `create: true`; the SeaweedFS/MinIO provisioning
-#                  and the consuming apps read `secretKey.value` (bring-your-own: set `create: false`
-#                  and pre-create the Secret, or override `secretKey.value`).
+#                  into the managed Secret `name` for `create: true`; the SeaweedFS/MinIO
+#                  provisioning reads `secretKey.value`, the consuming apps read it from the Secret
+#                  (bring-your-own: set `create: false` and pre-create the Secret).
+#   username       the identity's S3 access key ID, an externalized secret of the same shape. It
+#                  lives in the SAME Secret as the secret key by default (same `name`, key
+#                  `accessKeyId`): opendesk-secrets merges credentials that name one Secret into
+#                  one object, and the charts that take the pair from a single Secret (the nubus
+#                  portal, OpenProject) rely on the two sharing it. Bring-your-own: point both at
+#                  your Secret, under whichever keys it uses.
 #   enterprise     true -> bucket/identity only emitted in enterprise builds.
 objectstores:
   dovecot:
@@ -24,7 +30,11 @@ objectstores:
       create: true
       name: "objectstore-dovecot-secret-key"
       key: "secretKey"
-    username: "dovecot_user"
+    username:
+      value: "dovecot_user"
+      create: true
+      name: "objectstore-dovecot-secret-key"
+      key: "accessKeyId"
     storageClass: "STANDARD"
     useSSL: true
     pathStyle: true
@@ -40,7 +50,11 @@ objectstores:
       create: true
       name: "objectstore-migrations-secret-key"
       key: "secretKey"
-    username: "migration_user"
+    username:
+      value: "migration_user"
+      create: true
+      name: "objectstore-migrations-secret-key"
+      key: "accessKeyId"
     storageClass: "STANDARD"
     useSSL: true
     pathStyle: true
@@ -55,7 +69,11 @@ objectstores:
       create: true
       name: "objectstore-nextcloud-secret-key"
       key: "secretKey"
-    username: "nextcloud_user"
+    username:
+      value: "nextcloud_user"
+      create: true
+      name: "objectstore-nextcloud-secret-key"
+      key: "accessKeyId"
     storageClass: "STANDARD"
     useSSL: true
     pathStyle: true
@@ -69,10 +87,13 @@ objectstores:
       create: true
       name: "objectstore-notes-secret-key"
       key: "secretKey"
-    username: "notes_user"
+    username:
+      value: "notes_user"
+      create: true
+      name: "objectstore-notes-secret-key"
+      key: "accessKeyId"
     port: 443
     actions: ["Admin", "Read", "Write", "List"]
-  {{- $nubusUser := "ums_user" }}
   nubus:
     bucket: "ums"
     endpoint: ""
@@ -82,12 +103,11 @@ objectstores:
       create: true
       name: "objectstore-nubus-secret-key"
       key: "secretKey"
-      # The access key id travels in the same Secret (it is `username` below), so the nubus
-      # portal-server and portal-consumer charts read both credentials through one existingSecret.
-      # Bring-your-own: the pre-created Secret carries this key next to `key`.
-      extraData:
-        access-key-id: {{ $nubusUser | quote }}
-    username: {{ $nubusUser | quote }}
+    username:
+      value: "ums_user"
+      create: true
+      name: "objectstore-nubus-secret-key"
+      key: "accessKeyId"
     port: 443
     actions: ["Admin", "Read", "Write", "List"]
   openproject:
@@ -107,7 +127,11 @@ objectstores:
       extraData:
         OPENPROJECT_FOG_CREDENTIALS_AWS__ACCESS__KEY__ID: "openproject_user"
         OPENPROJECT_FOG_CREDENTIALS_AWS__SECRET__ACCESS__KEY: {{ derivePassword 1 "long" $masterPassword "minio" "openproject_user" | sha1sum | quote }}
-    username: "openproject_user"
+    username:
+      value: "openproject_user"
+      create: true
+      name: "objectstore-openproject-secret-key"
+      key: "accessKeyId"
     pathStyle: true
     useIamProfile: false
     actions: ["Admin", "Read", "Write", "List"]
@@ -123,7 +147,11 @@ objectstores:
       name: "objectstore-openxchange-secret-key"
       key: "secretKey"
     storageClass: "STANDARD"
-    username: "openxchange_user"
+    username:
+      value: "openxchange_user"
+      create: true
+      name: "objectstore-openxchange-secret-key"
+      key: "accessKeyId"
     useSSL: true
     actions: ["Admin", "Read", "Write", "List"]
 ...
