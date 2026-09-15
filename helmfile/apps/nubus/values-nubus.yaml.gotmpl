@@ -734,7 +734,12 @@ nubusPortalServer:
     centralNavigation:
       enabled: true
       auth:
-        sharedSecret: {{ .Values.secrets.centralnavigation.apiKey.value | quote }}
+        # The same Secret the Intercom Service reads (values-intercom-service.yaml.gotmpl), so both
+        # ends of the central navigation stay in sync. The chart's key name is `shared_secret`.
+        existingSecret:
+          name: {{ .Values.secrets.centralnavigation.apiKey.name | quote }}
+          keyMapping:
+            shared_secret: {{ .Values.secrets.centralnavigation.apiKey.key | quote }}
     featureToggles:
       notifications_api: false
       centered_layout: true
