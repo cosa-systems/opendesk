@@ -74,7 +74,12 @@ ics:
     subdomain: {{ .Values.global.hosts.matrixNeoDateFixBot | quote }}
   portal:
     auth:
-      sharedSecret: {{ .Values.secrets.centralnavigation.apiKey.value | quote }}
+      # The same Secret the portal-server's central navigation reads (values-nubus.yaml.gotmpl),
+      # so both ends stay in sync.
+      existingSecret:
+        name: {{ .Values.secrets.centralnavigation.apiKey.name | quote }}
+        keyMapping:
+          sharedSecret: {{ .Values.secrets.centralnavigation.apiKey.key | quote }}
   redis:
     host: {{ .Values.cache.intercomService.host | quote }}
     port: {{ .Values.cache.intercomService.port }}
