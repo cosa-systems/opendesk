@@ -1682,6 +1682,17 @@ nubusUmcServer:
         name: {{ .Values.secrets.postfix.opendeskSystemPassword.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.postfix.opendeskSystemPassword.key | quote }}
+  umcServer:
+    oidcClient:
+      auth:
+        # The client secret keycloak-bootstrap registers for the UMC relying party
+        # (`nubusKeycloakBootstrap.oidc.relyingParty.umcServer`), read from the Secret
+        # `secrets.keycloak.clientSecret.umcServer` names instead of the chart-generated
+        # <release>-keycloak-bootstrap-oidc-rp-umc-server Secret, which is no longer rendered.
+        existingSecret:
+          name: {{ .Values.secrets.keycloak.clientSecret.umcServer.name | quote }}
+          keyMapping:
+            password: {{ .Values.secrets.keycloak.clientSecret.umcServer.key | quote }}
 
 nubusUmcGateway:
   containerSecurityContext:
@@ -1787,6 +1798,17 @@ nubusKeycloakBootstrap:
         name: {{ .Values.secrets.nubus.ldapSearch.keycloak.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.ldapSearch.keycloak.key | quote }}
+  oidc:
+    relyingParty:
+      umcServer:
+        clientSecret:
+          # Registered from the Secret umc-server reads (`nubusUmcServer.oidcClient` below), see
+          # `secrets.keycloak.clientSecret.umcServer`. The chart then renders no
+          # <release>-keycloak-bootstrap-oidc-rp-umc-server Secret of its own.
+          existingSecret:
+            name: {{ .Values.secrets.keycloak.clientSecret.umcServer.name | quote }}
+            keyMapping:
+              password: {{ .Values.secrets.keycloak.clientSecret.umcServer.key | quote }}
   podAnnotations:
     intents.otterize.com/service-name: "ums-keycloak-bootstrap"
     {{- with .Values.annotations.nubusKeycloakBootstrapNubus.pod }}
