@@ -11,7 +11,7 @@ identities:
   {{- if or (not (dig "enterprise" false $store)) (eq (env "OPENDESK_ENTERPRISE") "true") }}
   - name: {{ $name | quote }}
     credentials:
-      - accessKey: "{{ $store.username }}"
+      - accessKey: "{{ $store.username.value }}"
         secretKey: "{{ $store.secretKey.value }}"
     actions:
       {{- range $store.actions }}

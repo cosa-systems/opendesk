@@ -1135,7 +1135,7 @@ appsuite:
       {{- end }}
     secretPropertiesFiles:
       /opt/open-xchange/etc/filestore-s3.properties:
-        com.openexchange.filestore.s3.ox-filestore-s3.accessKey: {{ .Values.objectstores.openxchange.username | quote }}
+        com.openexchange.filestore.s3.ox-filestore-s3.accessKey: {{ .Values.objectstores.openxchange.username.value | quote }}
         com.openexchange.filestore.s3.ox-filestore-s3.secretKey: {{ .Values.objectstores.openxchange.secretKey.value | quote }}
       /opt/open-xchange/etc/ldapauth.properties:
         bindDNPassword: {{ .Values.secrets.nubus.ldapSearch.ox.value | quote }}

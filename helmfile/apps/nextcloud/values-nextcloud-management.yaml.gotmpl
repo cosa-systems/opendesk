@@ -138,7 +138,9 @@ configuration:
   objectstore:
     auth:
       accessKey:
-        value: {{ .Values.objectstores.nextcloud.username | quote }}
+        secret:
+          name: {{ .Values.objectstores.nextcloud.username.name | quote }}
+          key: {{ .Values.objectstores.nextcloud.username.key | quote }}
       secretKey:
         secret:
           name: {{ .Values.objectstores.nextcloud.secretKey.name | quote }}

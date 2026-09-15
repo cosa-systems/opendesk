@@ -580,13 +580,15 @@ nubusPortalConsumer:
     logLevel: {{ if .Values.debug.enabled }}"DEBUG"{{ else }}"INFO"{{ end }}
   objectStorage:
     auth:
-      # Both credentials come from the objectstore's managed Secret: the secret key under
-      # `objectstores.nubus.secretKey.key`, the access key id under `access-key-id`, which
-      # objectstores.yaml.gotmpl adds to that Secret as `extraData`.
+      # Both credentials come from one Secret: the chart reads the pair through a single existingSecret,
+      # so `objectstores.nubus.username` and `.secretKey` have to name the same one (they do by default).
+      {{- if ne .Values.objectstores.nubus.username.name .Values.objectstores.nubus.secretKey.name }}
+      {{- fail "objectstores.nubus.username and objectstores.nubus.secretKey must name the same Secret: the portal reads both from one existingSecret" }}
+      {{- end }}
       existingSecret:
         name: {{ .Values.objectstores.nubus.secretKey.name | quote }}
         keyMapping:
-          access_key_id: "access-key-id"
+          access_key_id: {{ .Values.objectstores.nubus.username.key | quote }}
           secret_access_key: {{ .Values.objectstores.nubus.secretKey.key | quote }}
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
@@ -735,13 +737,15 @@ nubusPortalServer:
       secretName: {{ .Values.ingress.tls.secretName | quote }}
   objectStorage:
     auth:
-      # Both credentials come from the objectstore's managed Secret: the secret key under
-      # `objectstores.nubus.secretKey.key`, the access key id under `access-key-id`, which
-      # objectstores.yaml.gotmpl adds to that Secret as `extraData`.
+      # Both credentials come from one Secret: the chart reads the pair through a single existingSecret,
+      # so `objectstores.nubus.username` and `.secretKey` have to name the same one (they do by default).
+      {{- if ne .Values.objectstores.nubus.username.name .Values.objectstores.nubus.secretKey.name }}
+      {{- fail "objectstores.nubus.username and objectstores.nubus.secretKey must name the same Secret: the portal reads both from one existingSecret" }}
+      {{- end }}
       existingSecret:
         name: {{ .Values.objectstores.nubus.secretKey.name | quote }}
         keyMapping:
-          access_key_id: "access-key-id"
+          access_key_id: {{ .Values.objectstores.nubus.username.key | quote }}
           secret_access_key: {{ .Values.objectstores.nubus.secretKey.key | quote }}
     bucketName: {{ .Values.objectstores.nubus.bucket | quote }}
     {{- if .Values.objectstores.nubus.endpoint }}
