@@ -1483,6 +1483,56 @@ nubusStackDataUms:
   serviceAccount:
     annotations:
       {{ .Values.annotations.nubusStackDataUms.serviceAccount | toYaml | nindent 6 }}
+  {{- /* The ldapsearch_* LDAP bind accounts, one per `secrets.nubus.ldapSearch` entry. An entry
+         that names a Secret is created from that Secret: `contextUsers` below projects the password
+         into the data-loader context and the data file in `stackDataUms.extraDataFiles` creates the
+         account from it, so the account is created from the same Secret its consumer binds with and
+         `create: false` on the entry works end to end. A value-only entry is created from `.value`
+         through `templateContext.ldapSearchUsers`, as before. */}}
+  {{- $ldapSearchFromSecret := dict }}
+  {{- $ldapSearchInline := dict }}
+  {{- range $app, $entry := .Values.secrets.nubus.ldapSearch }}
+    {{- if (index $entry "name") }}
+      {{- $_ := set $ldapSearchFromSecret $app $entry }}
+    {{- else }}
+      {{- $_ := set $ldapSearchInline $app $entry }}
+    {{- end }}
+  {{- end }}
+  {{- if $ldapSearchFromSecret }}
+  stackDataUms:
+    # The sub-chart applies Helm templating ("tpl") to each file's content, so any curly braces in
+    # the content (i.e. Jinja2 expressions meant for the data loader) are escaped to pass through
+    # that stage unchanged.
+    extraDataFiles:
+      # Creates the ldapsearch_* accounts whose password `secrets.nubus.ldapSearch.<app>` delivers as
+      # a Secret, from the context variables `contextUsers` below projects out of those Secrets. The
+      # same create-then-modify pair as the loader's own 45-ldapsearch-users-loop.yaml (`users/ldap`
+      # cannot use `create_or_modify`), so a changed password is applied on redeploy. The `password`
+      # lines are escaped for the three template engines the file passes through - helmfile gotmpl,
+      # the chart's `tpl`, and only then the data loader's Jinja2, which resolves the variable.
+      "46-opendesk-ldapsearch-users-from-secrets.yaml": |
+        {{- range $app, $entry := $ldapSearchFromSecret }}
+        ---
+        action: "create"
+        module: "users/ldap"
+        position: "cn=users,{{ $.Values.ldap.baseDn }}"
+        properties:
+          username: {{ printf "ldapsearch_%s" $app | quote }}
+          lastname: "LDAP-Search-User"
+          password: "{{ printf `{{ "{{ ldapsearch%sPassword }}" }}` ($app | title) }}"
+          overridePWHistory: true
+          overridePWLength: true
+        ---
+        action: "modify"
+        module: "users/ldap"
+        position: "uid=ldapsearch_{{ $app }},cn=users,{{ $.Values.ldap.baseDn }}"
+        properties:
+          lastname: "LDAP-Search-User"
+          password: "{{ printf `{{ "{{ ldapsearch%sPassword }}" }}` ($app | title) }}"
+          overridePWHistory: true
+          overridePWLength: true
+        {{- end }}
+  {{- end }}
   # Pointing a context user at an existing Secret makes the data loader read that
   # password at Job runtime: a "prepare-context" init container merges it into
   # context.yaml, the chart omits the matching `templateContext` key from the
@@ -1514,6 +1564,28 @@ nubusStackDataUms:
         name: {{ .Values.secrets.nubus.systemAccounts.readonlyUserPassword.name | quote }}
         keyMapping:
           password: {{ .Values.secrets.nubus.systemAccounts.readonlyUserPassword.key | quote }}
+    # The ldapsearch_* bind accounts created from their Secrets (see above): each entry projects
+    # the account's password into the data-loader context as `ldapsearch<App>Password`, which the
+    # data file in `stackDataUms.extraDataFiles` creates the account from. Merge-only entries: the
+    # chart creates no account for them, the data file does.
+    {{- range $app, $entry := $ldapSearchFromSecret }}
+    {{ printf "ldapsearch%s" ($app | title) }}:
+      contextKey: {{ printf "ldapsearch%sPassword" ($app | title) | quote }}
+      existingSecret:
+        name: {{ $entry.name | quote }}
+        keyMapping:
+          password: {{ $entry.key | quote }}
+    {{- end }}
+    {{- if hasKey $ldapSearchFromSecret "ox" }}
+    # The OX data-file extension reads the ldapsearch_ox password as `oxSystemUserPassword`;
+    # projected from the same Secret instead of being inlined in `templateContext` below.
+    oxSystemUser:
+      contextKey: "oxSystemUserPassword"
+      existingSecret:
+        name: {{ .Values.secrets.nubus.ldapSearch.ox.name | quote }}
+        keyMapping:
+          password: {{ .Values.secrets.nubus.ldapSearch.ox.key | quote }}
+    {{- end }}
   templateContext:
     additionalMailDomains: {{ .Values.global.additionalMailDomains | toYaml | nindent 6 }}
     apps: {{ .Values.apps | toYaml | nindent 6 }}
@@ -1551,12 +1623,16 @@ nubusStackDataUms:
     oxDefaultContext: "1"
     oxDefaultLanguage: {{ .Values.functional.internationalization.defaultLanguage | quote }}
     oxContextHidden: true
+    {{- if not (hasKey $ldapSearchFromSecret "ox") }}
     oxSystemUserPassword: {{ .Values.secrets.nubus.ldapSearch.ox.value }}
+    {{- end }}
     portalOxLinkBase: {{ printf "https://%s.%s" .Values.global.hosts.openxchange .Values.global.domain }}
-    ldapSearchUsers:
-      {{- range $username, $password := .Values.secrets.nubus.ldapSearch }}
-      - username: {{ printf "ldapsearch_%s" $username | quote }}
-        password: {{ $password.value | quote }}
+    # Only the value-only `secrets.nubus.ldapSearch` entries; the ones that name a Secret are created
+    # from it by `contextUsers` and the data file in `stackDataUms.extraDataFiles` above.
+    ldapSearchUsers: {{ if not $ldapSearchInline }}[]{{ end }}
+      {{- range $app, $entry := $ldapSearchInline }}
+      - username: {{ printf "ldapsearch_%s" $app | quote }}
+        password: {{ $entry.value | quote }}
         lastname: "LDAP-Search-User"
       {{- end }}
     ldapSystemUsers: []
