@@ -15,13 +15,22 @@
 # `host`/`port`/`username`/`tls` **and** its `password.value`; a non-empty component entry wins
 # over the fallback in every consumer.
 
+{{- /* A non-empty MASTER_PASSWORD is enforced in `secrets.yaml.gotmpl`, which every helmfile run
+       renders alongside this file. The bundled server's password is derived once here: it is the
+       `cache.redis.password.value` below and the fallback the Notes connection URL is composed
+       with. (An environment values file cannot read `.Values`, hence the variable.) */}}
+{{- $redisPassword := derivePassword 1 "long" (env "MASTER_PASSWORD") "redis" "password" | sha1sum }}
+{{- $notesHost := "redis-headless" }}
+{{- $notesPort := 6379 }}
+{{- $notesUsername := "default" }}
+{{- $notesPassword := "" }}
+{{- $notesTls := false }}
+
 cache:
   redis:
     # The password the bundled Redis is deployed with, referenced by `auth.existingSecret` in the Redis chart.
     password:
-      # A non-empty MASTER_PASSWORD is enforced in `secrets.yaml.gotmpl`, which every helmfile run
-      # renders alongside this file.
-      value: {{ derivePassword 1 "long" (env "MASTER_PASSWORD") "redis" "password" | sha1sum | quote }}
+      value: {{ $redisPassword | quote }}
       create: true
       name: "redis-password"
       key: "redis-password"
@@ -51,13 +60,24 @@ cache:
       value: ""
     tls: false
   notes:
-    host: "redis-headless"
-    port: 6379
-    username: "default"
-    # Value-only: the Notes chart takes a connection URL with the password inlined.
+    host: {{ $notesHost | quote }}
+    port: {{ $notesPort }}
+    username: {{ $notesUsername | quote }}
+    # Value-only: the Notes chart takes no password on its own, only the connection URL below,
+    # which is composed from these fields. Empty means the bundled server's password, as everywhere.
     password:
-      value: ""
-    tls: false
+      value: {{ $notesPassword | quote }}
+    tls: {{ $notesTls }}
+    # The connection URL the Notes backend takes as one string, password included - so the URL is
+    # the credential, and it is delivered as a Secret the release reads through the chart's
+    # `redisUrl.existingSecret`. Composed from the fields above (same fallback to the bundled
+    # server's password), so overriding them still changes what Notes connects to. Bring-your-own:
+    # `create: false` and a pre-created Secret holding the full URL under `key`.
+    redisUrl:
+      value: {{ printf "redis%s://%s:%s@%s:%v/7" (ternary "s" "" $notesTls) $notesUsername (default $redisPassword $notesPassword) $notesHost $notesPort | quote }}
+      create: true
+      name: "cache-notes-redis-url"
+      key: "url"
   openproject:
     host: "memcached"
     port: 11211

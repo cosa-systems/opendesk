@@ -135,7 +135,12 @@ backend:
           key: {{ .Values.secrets.notes.superuser.key | quote }}
     frontendTheme: "openDesk"
     redisUrl:
-      value: "redis{{ if .Values.cache.notes.tls }}s{{ else }}{{ end }}://{{ .Values.cache.notes.username }}:{{ .Values.cache.notes.password.value | default .Values.cache.redis.password.value }}@{{ .Values.cache.notes.host }}:{{ .Values.cache.notes.port }}/7"
+      ## The URL carries the password, so it is a credential of its own: composed and delivered
+      ## as a Secret by `cache.notes.redisUrl`, read here through the chart's `existingSecret`.
+      ## `value` is left unset for the same reason as the credentials above.
+      existingSecret:
+        name: {{ .Values.cache.notes.redisUrl.name | quote }}
+        key: {{ .Values.cache.notes.redisUrl.key | quote }}
   extraEnvVars:
     - name: "FRONTEND_HOMEPAGE_FEATURE_ENABLED"
       value: "False"
