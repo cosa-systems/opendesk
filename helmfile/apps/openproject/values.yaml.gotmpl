@@ -325,7 +325,18 @@ extraEnvVars:
       secretKeyRef:
         name: {{ .Values.secrets.openproject.apiAdminPassword.name | quote }}
         key: {{ .Values.secrets.openproject.apiAdminPassword.key | quote }}
-
+  # The seeder takes the internal admin's initial password from
+  # OPENPROJECT_SEED_ADMIN_USER_PASSWORD. The chart fills that variable from
+  # `admin_user.secret` with Helm's `lookup`, which returns nothing when the
+  # chart is only rendered (helmfile template, Argo CD), so the chart's default
+  # "admin" lands in the openproject-core Secret. An `env` entry wins over the
+  # `envFrom` value of the same name, so read the password from its Secret at
+  # runtime, where lookup or not makes no difference.
+  - name: "OPENPROJECT_SEED_ADMIN_USER_PASSWORD"
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.secrets.openproject.adminPassword.name | quote }}
+        key: {{ .Values.secrets.openproject.adminPassword.key | quote }}
 resources:
   {{ .Values.resources.openproject | toYaml | nindent 2 }}
 
