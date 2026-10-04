@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2023 Bundesministerium des Innern und für Heimat, PG ZenDiS "Projektgruppe für Aufbau ZenDiS"
 # SPDX-License-Identifier: Apache-2.0
 ---
+{{- $jvbHostPort := eq (coalesce .Values.service.type.jitsiVideoBridge .Values.cluster.service.type) "HostPort" }}
+{{- $jvbPinnedIP := .Values.service.loadBalancerIP.jitsiVideoBridge }}
 global:
   domain: {{ .Values.global.domain | quote }}
   hosts:
@@ -245,10 +247,21 @@ jitsi:
       {{- end }}
   jvb:
     replicaCount: {{ .Values.replicas.jvb }}
+    {{- if $jvbHostPort }}
+    # The JVB receives media on its node's UDP port and advertises the node's IP, so that IP has to be reachable
+    # by the clients. The upstream chart then renders no Service, and the `patchJVB` job is not needed.
+    useHostPort: true
+    useNodeIP: true
+    {{- else if $jvbPinnedIP }}
+    # The LoadBalancer IP is pinned, so the JVB advertises it from the start. Patching it in after the deployment
+    # would be reverted by GitOps tools that correct drift, and the `patchJVB` job is not needed.
+    publicIPs: [ {{ $jvbPinnedIP | quote }} ]
+    {{- else }}
     # The `useNodeIP` option provided by the upstream charts does not support all relevant scenarios, but since
     # upstream charts v1.4.0 a value for `publicIPs` is required. We set a dummy value as we anyway update it
     # later with the `patchJVB` job.
     publicIPs: [ 0.0.0.0 ]
+    {{- end }}
     image:
       repository: "{{ coalesce .Values.repositories.image.registryOpencodeDe .Values.global.imageRegistry .Values.images.jvb.registry }}/{{ .Values.images.jvb.repository }}"
       tag: {{ .Values.images.jvb.tag | quote }}
@@ -260,6 +273,7 @@ jitsi:
     # Co-locate the JVB pod with its reserved LoadBalancer IP; required for
     # externalTrafficPolicy: Local to deliver the UDP media stream on platforms
     # that only route an LB IP to a node that also runs a pod for the Service.
+    # With `HostPort`, it selects the nodes whose IP the clients can reach.
     nodeSelector:
       {{ . | toYaml | nindent 6 }}
     {{- end }}
@@ -344,6 +358,7 @@ jitsi:
   {{- end }}
 
 patchJVB:
+  enabled: {{ not (or $jvbHostPort $jvbPinnedIP) }}
   backoffLimit: 12
   configuration:
     staticLoadbalancerIP: {{ .Values.cluster.networking.ingressGatewayIP | quote }}
